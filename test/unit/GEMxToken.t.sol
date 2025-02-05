@@ -4,14 +4,13 @@ pragma solidity ^0.8.13;
 //import {Test} from "forge-std/Test.sol";
 import {Test, console} from "lib/forge-std/src/Test.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
-import {GEMxToken} from "../src/GEMxToken.sol";
-import {GEMxTokenDeployer} from "../script/GEMxTokenDeployer.s.sol";
-import {SolvencyOracleMock} from "../src/SolvencyOracleMock.sol";
-import {SolvencyOracleMockDeployer} from "../script/SolvencyOracleMockDeployer.s.sol";
+import {GEMxToken} from "../../src/GEMxToken.sol";
+import {GEMxTokenDeployer} from "../../script/GEMxTokenDeployer.s.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 contract GEMxTokenTest is Test {
     GEMxToken private token;
-    SolvencyOracleMock private oracle;
+    AggregatorV3Interface private oracle;
     address admin = address(0x1);
     address minter = address(0x2);
     address user = address(0x3);
@@ -103,10 +102,5 @@ contract GEMxTokenTest is Test {
         token.revokeRole(role, minter);
 
         assertFalse(token.hasRole(token.MINTER_ROLE(), minter));
-    }
-
-    function _setProofOfSolvency(uint256 proof) private {
-        oracle.setProofOfSolvency(proof);
-        assertEq(oracle.getProofOfSolvency(), proof);
     }
 }

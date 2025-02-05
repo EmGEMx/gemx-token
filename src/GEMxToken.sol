@@ -1,4 +1,27 @@
-// SPDX-License-Identifier: UNLICENSED
+// Layout of Contract:
+// version
+// imports
+// errors
+// interfaces, libraries, contracts
+// Type declarations
+// State variables
+// Events
+// Modifiers
+// Functions
+
+// Layout of Functions:
+// constructor
+// receive function (if exists)
+// fallback function (if exists)
+// external
+// public
+// internal
+// private
+// internal & private view & pure functions
+// external & public view & pure functions
+
+// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.13;
 
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
@@ -7,28 +30,26 @@ import {
     ERC20BurnableUpgradeable
 } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {ISolvencyOracle, SolvencyOracleMock} from "./SolvencyOracleMock.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 contract GEMxToken is ERC20BurnableUpgradeable, AccessControlUpgradeable {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
-    ISolvencyOracle solvencyOracle;
-
-    event ProofOfSolvencyChanged(uint256 amount);
+    AggregatorV3Interface oracle;
 
     error NotEnoughReserve();
 
-    function initialize(address proofOfSolvencyOracleAddress) public initializer {
+    function initialize(address oracleAddres) public initializer {
         __ERC20_init("GEMxToken", "GEMX");
         __AccessControl_init();
         _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setRoleAdmin(MINTER_ROLE, DEFAULT_ADMIN_ROLE);
 
-        solvencyOracle = SolvencyOracleMock(proofOfSolvencyOracleAddress);
+        oracle = AggregatorV3Interface(oracleAddres);
     }
 
-    function getProofOfSolvency() external view returns (uint256) {
-        return solvencyOracle.getProofOfSolvency();
+    function getProofOfReserve() external view returns (uint256) {
+        return oracle.latestRoundData().answer;
     }
 
     function mint(address account, uint256 value) external onlyRole(MINTER_ROLE) {
@@ -41,7 +62,7 @@ contract GEMxToken is ERC20BurnableUpgradeable, AccessControlUpgradeable {
 
     function _update(address from, address to, uint256 amount) internal override(ERC20Upgradeable) {
         // make sure it cannot be minted more than proof of reserve!
-        if (from == address(0) && totalSupply() + amount > this.getProofOfSolvency()) {
+        if (from == address(0) && totalSupply() + amount > this.getProofOfReserve()) {
             revert NotEnoughReserve();
         }
 
