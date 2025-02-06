@@ -16,9 +16,13 @@ all: clean remove install update build
 
 build         	:; forge build
 clean        	:; forge clean
-# Remove modules
 remove          :; rm -rf .gitmodules && rm -rf .git/modules/* && rm -rf lib && touch .gitmodules && git add .
-install	        :; forge install OpenZeppelin/openzeppelin-contracts --no-commit && OpenZeppelin/openzeppelin-contracts-upgradeable --no-commit && forge install OpenZeppelin/openzeppelin-foundry-upgrades --no-commit && forge install foundry-rs/forge-std --no-commit
+install	        :; forge install foundry-rs/forge-std --no-commit && \
+                   forge install OpenZeppelin/openzeppelin-contracts --no-commit && \
+                   forge install OpenZeppelin/openzeppelin-contracts-upgradeable --no-commit && \
+				   forge install OpenZeppelin/openzeppelin-foundry-upgrades --no-commit && \
+				   forge install smartcontractkit/chainlink-brownie-contracts --no-commit
+				   
 test          	:; forge test
 test-vvv       :; forge test -vvv
 test-gasreport 	:; forge test --gas-report
