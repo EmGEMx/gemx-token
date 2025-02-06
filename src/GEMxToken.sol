@@ -49,7 +49,9 @@ contract GEMxToken is ERC20BurnableUpgradeable, AccessControlUpgradeable {
     }
 
     function getProofOfReserve() external view returns (uint256) {
-        return oracle.latestRoundData().answer;
+        (, int256 answer,,,) = oracle.latestRoundData();
+
+        return uint256(answer);
     }
 
     function mint(address account, uint256 value) external onlyRole(MINTER_ROLE) {

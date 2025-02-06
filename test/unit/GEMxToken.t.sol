@@ -5,12 +5,13 @@ pragma solidity ^0.8.13;
 import {Test, console} from "lib/forge-std/src/Test.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {GEMxToken} from "../../src/GEMxToken.sol";
-import {GEMxTokenDeployer} from "../../script/GEMxTokenDeployer.s.sol";
+import {DeployToken} from "../../script/DeployToken.s.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import {MockV3Aggregator} from "../mocks/MockV3Aggregator.sol";
 
 contract GEMxTokenTest is Test {
     GEMxToken private token;
-    AggregatorV3Interface private oracle;
+    MockV3Aggregator private oracle;
     address admin = address(0x1);
     address minter = address(0x2);
     address user = address(0x3);
@@ -19,21 +20,24 @@ contract GEMxTokenTest is Test {
         admin = makeAddr("Admin");
 
         //vm.startPrank(admin);
-        SolvencyOracleMockDeployer oracleDeployer = new SolvencyOracleMockDeployer();
-        oracle = oracleDeployer.run();
-
-        GEMxTokenDeployer deployer = new GEMxTokenDeployer();
-        token = deployer.run(address(oracle));
+        DeployToken deployer = new DeployToken();
+        token = deployer.run();
 
         // Grant roles
         token.grantRole(token.DEFAULT_ADMIN_ROLE(), admin);
+        
+        vm.startPrank(admin);
         token.grantRole(token.MINTER_ROLE(), minter);
-        //vm.stopPrank();
+        vm.stopPrank();
     }
 
-    function testMintRespectsProofOfSolvency() public {
-        uint256 proof = 1_000 ether;
-        _setProofOfSolvency(proof);
+    function _setProofOfReserve(int256 value) private {
+        oracle.updateAnswer(value);
+    }
+
+    function testMintRespectsProofOfReserve() public {
+        int256 proof = 1_000 ether;
+        _setProofOfReserve(proof);
 
         vm.prank(minter);
         token.mint(admin, 500 ether);
@@ -49,11 +53,11 @@ contract GEMxTokenTest is Test {
     }
 
     function testBurn() public {
-        uint256 proof = 1_000 ether;
-        _setProofOfSolvency(proof);
+        int256 proof = 1_000 ether;
+        _setProofOfReserve(proof);
 
         vm.prank(minter);
-        token.mint(user, proof);
+        token.mint(user, uint256(proof));
 
         vm.prank(user);
         token.burn(500 ether);
@@ -71,11 +75,11 @@ contract GEMxTokenTest is Test {
     }
 
     function testOnlyMinterCanBurn() public {
-        uint256 proof = 1_000 ether;
-        _setProofOfSolvency(proof);
+        int256 proof = 1_000 ether;
+        _setProofOfReserve(proof);
 
         vm.prank(minter);
-        token.mint(user, proof);
+        token.mint(user, uint256(proof));
 
         vm.expectRevert(
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user, token.MINTER_ROLE())
