@@ -41,17 +41,12 @@ contract GEMxToken is ERC20BurnableUpgradeable, AccessControlUpgradeable {
 
     function initialize(address oracleAddres) public initializer {
         __ERC20_init("GEMxToken", "GEMX");
+        __ERC20Burnable_init();
         __AccessControl_init();
         _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setRoleAdmin(MINTER_ROLE, DEFAULT_ADMIN_ROLE);
 
         oracle = AggregatorV3Interface(oracleAddres);
-    }
-
-    function getProofOfReserve() external view returns (uint256) {
-        (, int256 answer,,,) = oracle.latestRoundData();
-
-        return uint256(answer);
     }
 
     function mint(address account, uint256 value) external onlyRole(MINTER_ROLE) {
@@ -62,12 +57,22 @@ contract GEMxToken is ERC20BurnableUpgradeable, AccessControlUpgradeable {
         _burn(account, value);
     }
 
+    function getOracleAddress() public returns (address) {
+        return address(oracle);
+    }
+
     function _update(address from, address to, uint256 amount) internal override(ERC20Upgradeable) {
         // make sure it cannot be minted more than proof of reserve!
-        if (from == address(0) && totalSupply() + amount > this.getProofOfReserve()) {
+        if (from == address(0) && totalSupply() + amount > _getProofOfReserve()) {
             revert NotEnoughReserve();
         }
 
         super._update(from, to, amount);
+    }
+
+    function _getProofOfReserve() private view returns (uint256) {
+        (, int256 answer,,,) = oracle.latestRoundData();
+
+        return uint256(answer);
     }
 }

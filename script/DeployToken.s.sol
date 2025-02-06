@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 //import {Script, console} from "forge-std/Script.sol"; // not recognized by VS Code
 import {Script, console} from "lib/forge-std/src/Script.sol";
-import {HelperConfig, NetworkConfig} from "./HelperConfig.s.sol";
+import {HelperConfig} from "./HelperConfig.s.sol";
 import {GEMxToken} from "../src/GEMxToken.sol";
 
 contract DeployToken is Script {
@@ -16,7 +16,7 @@ contract DeployToken is Script {
 
         token = new GEMxToken();
         //NetworkConfig memory config = helperConfig.activeNetworkConfig();
-        (address proofOfReserveOracle,) = helperConfig.activeNetworkConfig();
+        (address proofOfReserveOracle) = helperConfig.activeNetworkConfig();
         //address oracleAddress = config.proofOfReserveOracle;
         token.initialize(proofOfReserveOracle);
 

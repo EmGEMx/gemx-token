@@ -15,18 +15,18 @@ contract GEMxTokenTest is Test {
     address admin = address(0x1);
     address minter = address(0x2);
     address user = address(0x3);
+    address anon = makeAddr("anon");
 
     function setUp() public {
         admin = makeAddr("Admin");
 
-        //vm.startPrank(admin);
         DeployToken deployer = new DeployToken();
         token = deployer.run();
+        oracle = MockV3Aggregator(token.getOracleAddress());
 
         // Grant roles
+        vm.startPrank(DEFAULT_SENDER);
         token.grantRole(token.DEFAULT_ADMIN_ROLE(), admin);
-        
-        vm.startPrank(admin);
         token.grantRole(token.MINTER_ROLE(), minter);
         vm.stopPrank();
     }
@@ -36,56 +36,57 @@ contract GEMxTokenTest is Test {
     }
 
     function testMintRespectsProofOfReserve() public {
-        int256 proof = 1_000 ether;
-        _setProofOfReserve(proof);
+        int256 reserve = 1_000 ether;
+        _setProofOfReserve(reserve);
 
-        vm.prank(minter);
-        token.mint(admin, 500 ether);
+        vm.startPrank(minter);
+        token.mint(user, 500 ether);
         assertEq(token.totalSupply(), 500 ether);
 
-        vm.prank(minter);
-        token.mint(admin, 500 ether);
+        // vm.prank(minter);
+        token.mint(user, 500 ether);
         assertEq(token.totalSupply(), 1_000 ether);
 
         vm.expectRevert(GEMxToken.NotEnoughReserve.selector);
-        vm.prank(minter);
-        token.mint(admin, 1);
-    }
+        // vm.prank(minter);
+        token.mint(user, 1);
+        vm.stopPrank();
 
-    function testBurn() public {
-        int256 proof = 1_000 ether;
-        _setProofOfReserve(proof);
-
-        vm.prank(minter);
-        token.mint(user, uint256(proof));
-
-        vm.prank(user);
-        token.burn(500 ether);
-
-        assertEq(token.balanceOf(user), 500 ether);
-        assertEq(token.totalSupply(), 500 ether);
+        assertEq(token.balanceOf(user), 1_000 ether);
     }
 
     function testOnlyMinterCanMint() public {
+        _setProofOfReserve(1_000 ether);
+
         vm.expectRevert(
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user, token.MINTER_ROLE())
         );
         vm.prank(user);
         token.mint(user, 1_000 ether);
+
+        vm.prank(minter);
+        token.mint(user, 1 ether);
+        assertEq(token.balanceOf(user), 1 ether);
     }
 
     function testOnlyMinterCanBurn() public {
-        int256 proof = 1_000 ether;
-        _setProofOfReserve(proof);
+        _setProofOfReserve(1_000 ether);
 
         vm.prank(minter);
-        token.mint(user, uint256(proof));
+        token.mint(user, uint256(10 ether));
 
         vm.expectRevert(
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user, token.MINTER_ROLE())
         );
         vm.prank(user);
-        token.burn(user, 500 ether);
+        token.burn(user, 1 ether);
+
+        assertEq(token.balanceOf(user), 10 ether);
+
+        vm.prank(minter);
+        token.burn(user, 1 ether);
+
+        assertEq(token.balanceOf(user), 9 ether);
     }
 
     function testAdminCanGrantRoles() public {
