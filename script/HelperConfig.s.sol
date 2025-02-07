@@ -27,15 +27,11 @@ contract HelperConfig is Script {
     }
 
     function getSepoliaEthConfig() public view returns (NetworkConfig memory sepoliaNetworkConfig) {
-        sepoliaNetworkConfig = NetworkConfig({
-            proofOfReserveOracle: address(0x0)
-        });
+        sepoliaNetworkConfig = NetworkConfig({proofOfReserveOracle: address(0x0)});
     }
 
     function getFujiEthConfig() public view returns (NetworkConfig memory fujiNetworkConfig) {
-        fujiNetworkConfig = NetworkConfig({
-            proofOfReserveOracle: address(0x0)
-        });
+        fujiNetworkConfig = NetworkConfig({proofOfReserveOracle: address(0x0)});
     }
 
     function getOrCreateAnvilEthConfig() public returns (NetworkConfig memory anvilNetworkConfig) {
@@ -48,8 +44,6 @@ contract HelperConfig is Script {
         MockV3Aggregator proofOfReserveFeed = new MockV3Aggregator(PROOF_OF_RESERVE_MOCK);
         vm.stopBroadcast();
 
-        anvilNetworkConfig = NetworkConfig({
-            proofOfReserveOracle: address(proofOfReserveFeed)
-        });
+        anvilNetworkConfig = NetworkConfig({proofOfReserveOracle: address(proofOfReserveFeed)});
     }
 }

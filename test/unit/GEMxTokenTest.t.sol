@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.22;
 
 //import {Test} from "forge-std/Test.sol";
 import {Test, console} from "lib/forge-std/src/Test.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
 import {GEMxToken} from "../../src/GEMxToken.sol";
 import {DeployToken} from "../../script/DeployToken.s.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/v0.8/shared/interfaces/AggregatorV3Interface.sol";
@@ -14,7 +15,8 @@ contract GEMxTokenTest is Test {
     MockV3Aggregator private oracle;
     address admin = address(0x1);
     address minter = address(0x2);
-    address user = address(0x3);
+    address pauser = address(0x3);
+    address user = address(0x4);
     address anon = makeAddr("anon");
 
     function setUp() public {
@@ -28,6 +30,7 @@ contract GEMxTokenTest is Test {
         vm.startPrank(DEFAULT_SENDER);
         token.grantRole(token.DEFAULT_ADMIN_ROLE(), admin);
         token.grantRole(token.MINTER_ROLE(), minter);
+        token.grantRole(token.PAUSER_ROLE(), pauser);
         vm.stopPrank();
     }
 
@@ -88,6 +91,19 @@ contract GEMxTokenTest is Test {
         assertEq(token.balanceOf(user), 9 ether);
     }
 
+    function testOnlyPauserCanPause() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user, token.PAUSER_ROLE())
+        );
+        vm.prank(user);
+        token.pause();
+        assertEq(token.paused(), false);
+
+        vm.prank(pauser);
+        token.pause();
+        assertEq(token.paused(), true);
+    }
+
     function testAdminCanGrantRoles() public {
         address newMinter = address(0x5);
 
@@ -96,6 +112,12 @@ contract GEMxTokenTest is Test {
         token.grantRole(role, newMinter);
 
         assertTrue(token.hasRole(token.MINTER_ROLE(), newMinter));
+
+        role = token.PAUSER_ROLE();
+        vm.prank(admin);
+        token.grantRole(role, newMinter);
+
+        assertTrue(token.hasRole(token.PAUSER_ROLE(), newMinter));
     }
 
     function testRevokeRoles() public {
@@ -106,5 +128,35 @@ contract GEMxTokenTest is Test {
         token.revokeRole(role, minter);
 
         assertFalse(token.hasRole(token.MINTER_ROLE(), minter));
+    }
+
+    function testPause() public {
+        _setProofOfReserve(1_000 ether);
+
+        vm.prank(minter);
+        token.mint(user, uint256(10 ether));
+
+        address receiver = makeAddr("receiver");
+        vm.prank(user);
+        token.transfer(receiver, 1 ether);
+        assertEq(token.balanceOf(receiver), 1 ether);
+
+        vm.prank(pauser);
+        token.pause();
+        assertEq(token.paused(), true);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(PausableUpgradeable.EnforcedPause.selector)
+        );
+        token.transfer(receiver, 1 ether);
+        assertEq(token.balanceOf(receiver), 1 ether);
+
+        vm.prank(pauser);
+        token.unpause();
+        assertEq(token.paused(), false);
+        
+        vm.prank(user);
+        token.transfer(receiver, 1 ether);
+        assertEq(token.balanceOf(receiver), 2 ether);
     }
 }
