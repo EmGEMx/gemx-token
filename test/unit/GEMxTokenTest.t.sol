@@ -43,12 +43,10 @@ contract GEMxTokenTest is Test {
         token.mint(user, 500 ether);
         assertEq(token.totalSupply(), 500 ether);
 
-        // vm.prank(minter);
         token.mint(user, 500 ether);
         assertEq(token.totalSupply(), 1_000 ether);
 
         vm.expectRevert(GEMxToken.NotEnoughReserve.selector);
-        // vm.prank(minter);
         token.mint(user, 1);
         vm.stopPrank();
 
@@ -63,6 +61,7 @@ contract GEMxTokenTest is Test {
         );
         vm.prank(user);
         token.mint(user, 1_000 ether);
+        assertEq(token.balanceOf(user), 0 ether);
 
         vm.prank(minter);
         token.mint(user, 1 ether);

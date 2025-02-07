@@ -22,9 +22,8 @@ install	        :; forge install foundry-rs/forge-std --no-commit && \
                    forge install OpenZeppelin/openzeppelin-contracts-upgradeable --no-commit && \
 				   forge install OpenZeppelin/openzeppelin-foundry-upgrades --no-commit && \
 				   forge install smartcontractkit/chainlink-brownie-contracts --no-commit
-				   
 test          	:; forge test
-test-vvv       :; forge test -vvv
+test-vvv        :; forge test -vvv
 test-gasreport 	:; forge test --gas-report
 test-fork       :; forge test --fork-url ${ETH_RPC_URL} -vvv
 coverage        :; mkdir -p ./coverage && forge coverage --report lcov --report-file coverage/lcov.info && genhtml coverage/lcov.info -o coverage --branch-coverage

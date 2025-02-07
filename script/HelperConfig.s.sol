@@ -8,14 +8,13 @@ contract HelperConfig is Script {
     NetworkConfig public activeNetworkConfig;
 
     uint8 public constant DECIMALS = 18;
-    int256 public constant PROOF_OF_RESERVE = 100_000;
+    int256 public constant PROOF_OF_RESERVE_MOCK = 100_000;
 
     uint256 public DEFAULT_ANVIL_PRIVATE_KEY = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
 
     struct NetworkConfig {
         address proofOfReserveOracle;
     }
-    //uint256 deployerKey;
 
     constructor() {
         if (block.chainid == 11155111) {
@@ -29,13 +28,13 @@ contract HelperConfig is Script {
 
     function getSepoliaEthConfig() public view returns (NetworkConfig memory sepoliaNetworkConfig) {
         sepoliaNetworkConfig = NetworkConfig({
-            proofOfReserveOracle: address(0x0) //, deployerKey: vm.envUint("PRIVATE_KEY")
+            proofOfReserveOracle: address(0x0)
         });
     }
 
     function getFujiEthConfig() public view returns (NetworkConfig memory fujiNetworkConfig) {
         fujiNetworkConfig = NetworkConfig({
-            proofOfReserveOracle: address(0x0) //, deployerKey: vm.envUint("PRIVATE_KEY")
+            proofOfReserveOracle: address(0x0)
         });
     }
 
@@ -46,11 +45,11 @@ contract HelperConfig is Script {
         }
 
         vm.startBroadcast();
-        MockV3Aggregator proofOfReserveFeed = new MockV3Aggregator(PROOF_OF_RESERVE);
+        MockV3Aggregator proofOfReserveFeed = new MockV3Aggregator(PROOF_OF_RESERVE_MOCK);
         vm.stopBroadcast();
 
         anvilNetworkConfig = NetworkConfig({
-            proofOfReserveOracle: address(proofOfReserveFeed) //, deployerKey: DEFAULT_ANVIL_PRIVATE_KEY
+            proofOfReserveOracle: address(proofOfReserveFeed)
         });
     }
 }

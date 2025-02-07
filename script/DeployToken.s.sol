@@ -10,14 +10,12 @@ contract DeployToken is Script {
     GEMxToken public token;
 
     function run() public returns (GEMxToken) {
-        HelperConfig helperConfig = new HelperConfig(); // This comes with our mocks!
+        HelperConfig helperConfig = new HelperConfig();
 
         vm.startBroadcast();
 
         token = new GEMxToken();
-        //NetworkConfig memory config = helperConfig.activeNetworkConfig();
         (address proofOfReserveOracle) = helperConfig.activeNetworkConfig();
-        //address oracleAddress = config.proofOfReserveOracle;
         token.initialize(proofOfReserveOracle);
 
         vm.stopBroadcast();
