@@ -7,6 +7,7 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 import {PausableUpgradeable} from
     "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
 import {ERC20CustodianUpgradeable} from "../../src/ERC20CustodianUpgradeable.sol";
+import {ERC20BlocklistUpgradeable} from "../../src/ERC20BlocklistUpgradeable.sol";
 import {GEMxToken} from "../../src/GEMxToken.sol";
 import {DeployToken} from "../../script/DeployToken.s.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/v0.8/shared/interfaces/AggregatorV3Interface.sol";
@@ -19,7 +20,8 @@ contract GEMxTokenTest is Test {
     address minter = address(0x2);
     address pauser = address(0x3);
     address custodian = address(0x4);
-    address user = address(0x5);
+    address limiter = address(0x5);
+    address user = address(0x6);
     address anon = makeAddr("anon");
 
     function setUp() public {
@@ -35,6 +37,7 @@ contract GEMxTokenTest is Test {
         token.grantRole(token.MINTER_ROLE(), minter);
         token.grantRole(token.PAUSER_ROLE(), pauser);
         token.grantRole(token.CUSTODIAN_ROLE(), custodian);
+        token.grantRole(token.LIMITER_ROLE(), limiter);
         vm.stopPrank();
     }
 
@@ -61,6 +64,10 @@ contract GEMxTokenTest is Test {
 
         assertEq(token.balanceOf(user), 1_000 ether);
     }
+
+    /**********************************************************************************/
+    /**********************************  MINT/BURN  ***********************************/
+    /**********************************************************************************/
 
     function testOnlyMinterCanMint() public {
         _setProofOfReserve(1_000 ether);
@@ -97,6 +104,10 @@ contract GEMxTokenTest is Test {
         assertEq(token.balanceOf(user), 9 ether);
     }
 
+    /**********************************************************************************/
+    /********************************  PAUSE/UNPAUSE  *********************************/
+    /**********************************************************************************/
+
     function testOnlyPauserCanPause() public {
         vm.expectRevert(
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user, token.PAUSER_ROLE())
@@ -109,6 +120,57 @@ contract GEMxTokenTest is Test {
         token.pause();
         assertEq(token.paused(), true);
     }
+
+    function testOnlyPauserCanUnpause() public {
+        vm.prank(pauser);
+        token.pause();
+        assertEq(token.paused(), true);
+        
+        // ACT
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user, token.PAUSER_ROLE())
+        );
+        vm.prank(user);
+        token.pause();
+        assertEq(token.paused(), true);
+
+        vm.prank(pauser);
+        token.unpause();
+        assertEq(token.paused(), false);
+    }
+
+    function testTransferWhenPauseUnpause() public {
+        _setProofOfReserve(1_000 ether);
+
+        vm.prank(minter);
+        token.mint(user, uint256(10 ether));
+
+        address receiver = makeAddr("receiver");
+        vm.prank(user);
+        token.transfer(receiver, 1 ether);
+        assertEq(token.balanceOf(receiver), 1 ether);
+
+        vm.prank(pauser);
+        token.pause();
+        assertEq(token.paused(), true);
+
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
+        vm.prank(user);
+        token.transfer(receiver, 1 ether);
+        assertEq(token.balanceOf(receiver), 1 ether);
+
+        vm.prank(pauser);
+        token.unpause();
+        assertEq(token.paused(), false);
+
+        vm.prank(user);
+        token.transfer(receiver, 1 ether);
+        assertEq(token.balanceOf(receiver), 2 ether);
+    }
+
+    /**********************************************************************************/
+    /*******************************  FREEZE/UNFREEZE  ********************************/
+    /**********************************************************************************/
 
     // TODO: split into separate tests once modifier with test setup is implemented
     function testOnlyCustodianCanFreezeAndUnfreeze() public {
@@ -148,23 +210,119 @@ contract GEMxTokenTest is Test {
         assertEq(token.availableBalance(user), 10 ether);
     }
 
+    /**********************************************************************************/
+    /********************************  BLOCK/UNBLOCK  *********************************/
+    /**********************************************************************************/
+
+    function testOnlyLimiterCanBlockUser() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user, token.LIMITER_ROLE())
+        );
+        vm.prank(user);
+        token.blockUser(anon);
+        assertEq(token.blocked(anon), false);
+
+        vm.prank(limiter);
+        token.blockUser(anon);
+        assertEq(token.blocked(anon), true);
+    }
+
+    function testOnlyPauserCanUnblockUser() public {
+        vm.prank(limiter);
+        token.blockUser(anon);
+        assertEq(token.blocked(anon), true);
+        
+        // ACT
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user, token.LIMITER_ROLE())
+        );
+        vm.prank(user);
+        token.unblockUser(anon);
+        assertEq(token.blocked(anon), true);
+
+        vm.prank(limiter);
+        token.unblockUser(anon);
+        assertEq(token.blocked(anon), false);
+    }
+
+    function testTransferWhenUserBlocked() public {
+        _setProofOfReserve(1_000 ether);
+
+        vm.prank(minter);
+        token.mint(user, uint256(10 ether));
+
+        // send some tokens so sending can be tested when user gets blocked
+        address receiver = makeAddr("receiver");
+        vm.prank(user);
+        token.transfer(receiver, 1 ether);
+        assertEq(token.balanceOf(receiver), 1 ether);
+
+        vm.prank(limiter);
+        token.blockUser(receiver);
+        assertEq(token.blocked(receiver), true);
+
+        // neither sending nor receiving should work, basically receiver should keep 1 as initially sent!
+
+        // receiving
+        vm.expectRevert(
+            abi.encodeWithSelector(ERC20BlocklistUpgradeable.ERC20Blocked.selector, receiver)
+        );
+        vm.prank(user);
+        token.transfer(receiver, 1 ether);
+        assertEq(token.balanceOf(receiver), 1 ether, "Tokens should not be received");
+
+        // sending
+        vm.expectRevert(
+            abi.encodeWithSelector(ERC20BlocklistUpgradeable.ERC20Blocked.selector, receiver)
+        );
+        vm.prank(receiver);
+        token.transfer(user, 1 ether);
+        assertEq(token.balanceOf(receiver), 1 ether, "Tokens should not be moved");
+
+        vm.prank(limiter);
+        token.unblockUser(receiver);
+        assertEq(token.blocked(receiver), false);
+
+        // receiving should work again
+        vm.prank(user);
+        token.transfer(receiver, 1 ether);
+        assertEq(token.balanceOf(receiver), 2 ether);
+
+        // sending should work again
+        vm.prank(receiver);
+        token.transfer(user, 1 ether);
+        assertEq(token.balanceOf(receiver), 1 ether);
+    }
+
+    /**********************************************************************************/
+    /*************************************  RBAC  *************************************/
+    /**********************************************************************************/
+
     function testAdminCanGrantRoles() public {
         address newMinter = address(0x5);
 
         bytes32 role = token.MINTER_ROLE();
         vm.prank(admin);
         token.grantRole(role, newMinter);
-
         assertTrue(token.hasRole(token.MINTER_ROLE(), newMinter));
 
         role = token.PAUSER_ROLE();
         vm.prank(admin);
         token.grantRole(role, newMinter);
-
         assertTrue(token.hasRole(token.PAUSER_ROLE(), newMinter));
+
+        role = token.CUSTODIAN_ROLE();
+        vm.prank(admin);
+        token.grantRole(role, newMinter);
+        assertTrue(token.hasRole(token.CUSTODIAN_ROLE(), newMinter));
+
+        role = token.LIMITER_ROLE();
+        vm.prank(admin);
+        token.grantRole(role, newMinter);
+        assertTrue(token.hasRole(token.LIMITER_ROLE(), newMinter));
     }
 
-    function testRevokeRoles() public {
+    function testAdminCanRevoketRoles() public {
         bytes32 minteRole = token.MINTER_ROLE();
         assertTrue(token.hasRole(minteRole, minter));
         vm.prank(admin);
@@ -176,34 +334,17 @@ contract GEMxTokenTest is Test {
         vm.prank(admin);
         token.revokeRole(pauserRole, pauser);
         assertFalse(token.hasRole(pauserRole, pauser));
-    }
 
-    function testPause() public {
-        _setProofOfReserve(1_000 ether);
+        bytes32 custodianRole = token.CUSTODIAN_ROLE();
+        assertTrue(token.hasRole(custodianRole, custodian));
+        vm.prank(admin);
+        token.revokeRole(custodianRole, custodian);
+        assertFalse(token.hasRole(custodianRole, custodian));
 
-        vm.prank(minter);
-        token.mint(user, uint256(10 ether));
-
-        address receiver = makeAddr("receiver");
-        vm.prank(user);
-        token.transfer(receiver, 1 ether);
-        assertEq(token.balanceOf(receiver), 1 ether);
-
-        vm.prank(pauser);
-        token.pause();
-        assertEq(token.paused(), true);
-
-        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
-        vm.prank(user);
-        token.transfer(receiver, 1 ether);
-        assertEq(token.balanceOf(receiver), 1 ether);
-
-        vm.prank(pauser);
-        token.unpause();
-        assertEq(token.paused(), false);
-
-        vm.prank(user);
-        token.transfer(receiver, 1 ether);
-        assertEq(token.balanceOf(receiver), 2 ether);
+        bytes32 limiterRole = token.LIMITER_ROLE();
+        assertTrue(token.hasRole(limiterRole, limiter));
+        vm.prank(admin);
+        token.revokeRole(limiterRole, limiter);
+        assertFalse(token.hasRole(limiterRole, limiter));
     }
 }

@@ -32,8 +32,8 @@ import {ERC20PausableUpgradeable} from
     "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
 import {ERC20PermitUpgradeable} from
     "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
-//import {ERC20Custodian} from "@openzeppelin/community-contracts/token/ERC20/extensions/ERC20Custodian.sol";
 import {ERC20CustodianUpgradeable} from "./ERC20CustodianUpgradeable.sol";
+import {ERC20BlocklistUpgradeable} from "./ERC20BlocklistUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
@@ -42,11 +42,13 @@ contract GEMxToken is
     ERC20BurnableUpgradeable,
     ERC20PausableUpgradeable,
     AccessControlUpgradeable,
-    ERC20CustodianUpgradeable
+    ERC20CustodianUpgradeable,
+    ERC20BlocklistUpgradeable
 {
-    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
-    bytes32 public constant CUSTODIAN_ROLE = keccak256("CUSTODIAN_ROLE");
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");         // pause/unpause token
+    bytes32 public constant CUSTODIAN_ROLE = keccak256("CUSTODIAN_ROLE");   // freeze/unfreeze tokens
+    bytes32 public constant LIMITER_ROLE = keccak256("LIMITER_ROLE");       // block/unblock user
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     // constructor() {
@@ -69,18 +71,6 @@ contract GEMxToken is
         oracle = AggregatorV3Interface(oracleAddres);
     }
 
-    function pause() public onlyRole(PAUSER_ROLE) {
-        _pause();
-    }
-
-    function unpause() public onlyRole(PAUSER_ROLE) {
-        _unpause();
-    }
-
-    function _isCustodian(address user) internal view override returns (bool) {
-        return hasRole(CUSTODIAN_ROLE, user);
-    }
-
     function mint(address account, uint256 value) external onlyRole(MINTER_ROLE) {
         _mint(account, value);
     }
@@ -89,13 +79,33 @@ contract GEMxToken is
         _burn(account, value);
     }
 
+    function pause() public onlyRole(PAUSER_ROLE) {
+        _pause();
+    }
+
+    function unpause() public onlyRole(PAUSER_ROLE) {
+        _unpause();
+    }
+
+    function blockUser(address user) public onlyRole(LIMITER_ROLE) {
+        _blockUser(user);
+    }
+
+    function unblockUser(address user) public onlyRole(LIMITER_ROLE) {
+        _unblockUser(user);
+    }
+
     function getOracleAddress() public returns (address) {
         return address(oracle);
     }
 
+    function _isCustodian(address user) internal view override returns (bool) {
+        return hasRole(CUSTODIAN_ROLE, user);
+    }
+
     function _update(address from, address to, uint256 amount)
         internal
-        override(ERC20Upgradeable, ERC20PausableUpgradeable, ERC20CustodianUpgradeable)
+        override(ERC20Upgradeable, ERC20PausableUpgradeable, ERC20CustodianUpgradeable, ERC20BlocklistUpgradeable)
     {
         // make sure it cannot be minted more than proof of reserve!
         if (from == address(0) && totalSupply() + amount > _getProofOfReserve()) {
@@ -103,6 +113,13 @@ contract GEMxToken is
         }
 
         super._update(from, to, amount);
+    }
+
+    function _approve(address owner, address spender, uint256 value, bool emitEvent)
+        internal
+        override(ERC20Upgradeable, ERC20BlocklistUpgradeable)
+    {
+        super._approve(owner, spender, value, emitEvent);
     }
 
     function _getProofOfReserve() private view returns (uint256) {
