@@ -21,7 +21,8 @@ install	        :; forge install foundry-rs/forge-std --no-commit && \
                    forge install OpenZeppelin/openzeppelin-contracts --no-commit && \
                    forge install OpenZeppelin/openzeppelin-contracts-upgradeable --no-commit && \
 				   forge install OpenZeppelin/openzeppelin-foundry-upgrades --no-commit && \
-				   forge install smartcontractkit/chainlink-brownie-contracts --no-commit
+				   forge install smartcontractkit/chainlink-brownie-contracts --no-commit && \
+				   forge install OpenZeppelin/openzeppelin-community-contracts --no-commit
 test          	:; forge test
 test-vvv        :; forge test -vvv
 test-gasreport 	:; forge test --gas-report

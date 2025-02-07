@@ -26,18 +26,28 @@ pragma solidity ^0.8.22;
 
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import {ERC20BurnableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
-import {ERC20PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
-import {ERC20PermitUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
+import {ERC20BurnableUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
+import {ERC20PausableUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
+import {ERC20PermitUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
+//import {ERC20Custodian} from "@openzeppelin/community-contracts/token/ERC20/extensions/ERC20Custodian.sol";
+import {ERC20CustodianUpgradeable} from "./ERC20CustodianUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
-contract GEMxToken is 
-    ERC20Upgradeable, ERC20BurnableUpgradeable, ERC20PausableUpgradeable, AccessControlUpgradeable
+contract GEMxToken is
+    ERC20Upgradeable,
+    ERC20BurnableUpgradeable,
+    ERC20PausableUpgradeable,
+    AccessControlUpgradeable,
+    ERC20CustodianUpgradeable
 {
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
-    
+    bytes32 public constant CUSTODIAN_ROLE = keccak256("CUSTODIAN_ROLE");
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     // constructor() {
     //     _disableInitializers();
@@ -67,6 +77,10 @@ contract GEMxToken is
         _unpause();
     }
 
+    function _isCustodian(address user) internal view override returns (bool) {
+        return hasRole(CUSTODIAN_ROLE, user);
+    }
+
     function mint(address account, uint256 value) external onlyRole(MINTER_ROLE) {
         _mint(account, value);
     }
@@ -79,7 +93,10 @@ contract GEMxToken is
         return address(oracle);
     }
 
-    function _update(address from, address to, uint256 amount) internal override(ERC20Upgradeable, ERC20PausableUpgradeable) {
+    function _update(address from, address to, uint256 amount)
+        internal
+        override(ERC20Upgradeable, ERC20PausableUpgradeable, ERC20CustodianUpgradeable)
+    {
         // make sure it cannot be minted more than proof of reserve!
         if (from == address(0) && totalSupply() + amount > _getProofOfReserve()) {
             revert NotEnoughReserve();

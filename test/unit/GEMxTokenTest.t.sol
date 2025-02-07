@@ -4,7 +4,9 @@ pragma solidity ^0.8.22;
 //import {Test} from "forge-std/Test.sol";
 import {Test, console} from "lib/forge-std/src/Test.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
+import {PausableUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
+import {ERC20CustodianUpgradeable} from "../../src/ERC20CustodianUpgradeable.sol";
 import {GEMxToken} from "../../src/GEMxToken.sol";
 import {DeployToken} from "../../script/DeployToken.s.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/v0.8/shared/interfaces/AggregatorV3Interface.sol";
@@ -16,7 +18,8 @@ contract GEMxTokenTest is Test {
     address admin = address(0x1);
     address minter = address(0x2);
     address pauser = address(0x3);
-    address user = address(0x4);
+    address custodian = address(0x4);
+    address user = address(0x5);
     address anon = makeAddr("anon");
 
     function setUp() public {
@@ -31,8 +34,11 @@ contract GEMxTokenTest is Test {
         token.grantRole(token.DEFAULT_ADMIN_ROLE(), admin);
         token.grantRole(token.MINTER_ROLE(), minter);
         token.grantRole(token.PAUSER_ROLE(), pauser);
+        token.grantRole(token.CUSTODIAN_ROLE(), custodian);
         vm.stopPrank();
     }
+
+    // TODO: set up invariant testing. Inveriant of the system: it should never be possible to mint more than allowed by ESU and PoR!
 
     function _setProofOfReserve(int256 value) private {
         oracle.updateAnswer(value);
@@ -104,6 +110,44 @@ contract GEMxTokenTest is Test {
         assertEq(token.paused(), true);
     }
 
+    // TODO: split into separate tests once modifier with test setup is implemented
+    function testOnlyCustodianCanFreezeAndUnfreeze() public {
+        _setProofOfReserve(1_000 ether);
+
+        vm.prank(minter);
+        token.mint(user, uint256(10 ether));
+
+        // freeze not allowed
+        vm.expectRevert(ERC20CustodianUpgradeable.ERC20NotCustodian.selector);
+        vm.prank(anon);
+        token.freeze(user, 1 ether);
+        assertEq(token.frozen(user), 0);
+        assertEq(token.availableBalance(user), 10 ether);
+
+        // freeze allowed
+        vm.expectEmit();
+        emit ERC20CustodianUpgradeable.TokensFrozen(user, 1 ether);
+        vm.prank(custodian);
+        token.freeze(user, 1 ether);
+        assertEq(token.frozen(user), 1 ether);
+        assertEq(token.availableBalance(user), 9 ether);
+
+        // unfreeze not allowed
+        vm.expectRevert(ERC20CustodianUpgradeable.ERC20NotCustodian.selector);
+        vm.prank(anon);
+        token.freeze(user, 0 ether);
+        assertEq(token.frozen(user), 1 ether);
+        assertEq(token.availableBalance(user), 9 ether);
+
+        // unfreeze allowed
+        vm.expectEmit();
+        emit ERC20CustodianUpgradeable.TokensFrozen(user, 0);
+        vm.prank(custodian);
+        token.freeze(user, 0 ether);
+        assertEq(token.frozen(user), 0);
+        assertEq(token.availableBalance(user), 10 ether);
+    }
+
     function testAdminCanGrantRoles() public {
         address newMinter = address(0x5);
 
@@ -121,13 +165,17 @@ contract GEMxTokenTest is Test {
     }
 
     function testRevokeRoles() public {
-        assertTrue(token.hasRole(token.MINTER_ROLE(), minter));
-
-        bytes32 role = token.MINTER_ROLE();
+        bytes32 minteRole = token.MINTER_ROLE();
+        assertTrue(token.hasRole(minteRole, minter));
         vm.prank(admin);
-        token.revokeRole(role, minter);
+        token.revokeRole(minteRole, minter);
+        assertFalse(token.hasRole(minteRole, minter));
 
-        assertFalse(token.hasRole(token.MINTER_ROLE(), minter));
+        bytes32 pauserRole = token.PAUSER_ROLE();
+        assertTrue(token.hasRole(pauserRole, pauser));
+        vm.prank(admin);
+        token.revokeRole(pauserRole, pauser);
+        assertFalse(token.hasRole(pauserRole, pauser));
     }
 
     function testPause() public {
@@ -145,16 +193,15 @@ contract GEMxTokenTest is Test {
         token.pause();
         assertEq(token.paused(), true);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(PausableUpgradeable.EnforcedPause.selector)
-        );
+        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
+        vm.prank(user);
         token.transfer(receiver, 1 ether);
         assertEq(token.balanceOf(receiver), 1 ether);
 
         vm.prank(pauser);
         token.unpause();
         assertEq(token.paused(), false);
-        
+
         vm.prank(user);
         token.transfer(receiver, 1 ether);
         assertEq(token.balanceOf(receiver), 2 ether);
