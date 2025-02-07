@@ -294,6 +294,33 @@ contract GEMxTokenTest is Test {
         assertEq(token.balanceOf(receiver), 1 ether);
     }
 
+    function testErc20ApproveWhenUserBlocked() public {
+        _setProofOfReserve(1_000 ether);
+
+        vm.prank(minter);
+        token.mint(user, uint256(10 ether));
+
+        vm.prank(limiter);
+        token.blockUser(user);
+        assertEq(token.blocked(user), true);
+
+        // user should not be able approve others in case he is blocked
+        vm.expectRevert(
+            abi.encodeWithSelector(ERC20BlocklistUpgradeable.ERC20Blocked.selector, user)
+        );
+        vm.prank(user);
+        token.approve(anon, 1 ether);
+        assertEq(token.allowance(user, anon), 0);
+
+        vm.prank(limiter);
+        token.unblockUser(user);
+        assertEq(token.blocked(user), false);
+
+        vm.prank(user);
+        token.approve(anon, 1 ether);
+        assertEq(token.allowance(user, anon), 1 ether);
+    }
+
     /**********************************************************************************/
     /*************************************  RBAC  *************************************/
     /**********************************************************************************/

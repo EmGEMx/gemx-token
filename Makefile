@@ -27,7 +27,7 @@ test          	:; forge test
 test-vvv        :; forge test -vvv
 test-gasreport 	:; forge test --gas-report
 test-fork       :; forge test --fork-url ${ETH_RPC_URL} -vvv
-coverage        :; mkdir -p ./coverage && forge coverage --report lcov --report-file coverage/lcov.info && genhtml coverage/lcov.info -o coverage --branch-coverage
+coverage        :; mkdir -p ./coverage && forge coverage --no-match-coverage "script|test" --report lcov --report-file coverage/lcov.info && genhtml coverage/lcov.info -o coverage --branch-coverage
 snapshot        :; forge snapshot
 format          :; forge fmt
 anvil           :; anvil -m 'test test test test test test test test test test test junk' --steps-tracing --block-time 1
