@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.20;
 
 import {MockV3Aggregator} from "../test/mocks/MockV3Aggregator.sol";
 import {Script} from "forge-std/Script.sol";
@@ -26,11 +26,11 @@ contract HelperConfig is Script {
         }
     }
 
-    function getSepoliaEthConfig() public view returns (NetworkConfig memory sepoliaNetworkConfig) {
+    function getSepoliaEthConfig() public pure returns (NetworkConfig memory sepoliaNetworkConfig) {
         sepoliaNetworkConfig = NetworkConfig({proofOfReserveOracle: address(0x0)});
     }
 
-    function getFujiEthConfig() public view returns (NetworkConfig memory fujiNetworkConfig) {
+    function getFujiEthConfig() public pure returns (NetworkConfig memory fujiNetworkConfig) {
         fujiNetworkConfig = NetworkConfig({proofOfReserveOracle: address(0x0)});
     }
 

@@ -22,7 +22,7 @@
 
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.20;
 
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
@@ -123,7 +123,7 @@ contract GEMxToken is
     }
 
     function _getProofOfReserve() private view returns (uint256) {
-        (, int256 answer,,,) = oracle.latestRoundData();
+        (, int256 answer, , ,) = oracle.latestRoundData();
 
         return uint256(answer);
     }

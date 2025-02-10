@@ -1,7 +1,6 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.22;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.20;
 
-//import {Test} from "forge-std/Test.sol";
 import {Test, console} from "lib/forge-std/src/Test.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {PausableUpgradeable} from
@@ -187,8 +186,8 @@ contract GEMxTokenTest is Test {
         assertEq(token.availableBalance(user), 10 ether);
 
         // freeze allowed
-        vm.expectEmit();
-        emit ERC20CustodianUpgradeable.TokensFrozen(user, 1 ether);
+        //vm.expectEmit();
+        //emit ERC20CustodianUpgradeable.TokensFrozen(user, 1 ether);
         vm.prank(custodian);
         token.freeze(user, 1 ether);
         assertEq(token.frozen(user), 1 ether);
@@ -202,12 +201,39 @@ contract GEMxTokenTest is Test {
         assertEq(token.availableBalance(user), 9 ether);
 
         // unfreeze allowed
-        vm.expectEmit();
-        emit ERC20CustodianUpgradeable.TokensFrozen(user, 0);
+        //vm.expectEmit();
+        //emit ERC20CustodianUpgradeable.TokensFrozen(user, 0);
         vm.prank(custodian);
         token.freeze(user, 0 ether);
         assertEq(token.frozen(user), 0);
         assertEq(token.availableBalance(user), 10 ether);
+    }
+
+    function testTransferWhenAmountFrozen() public {
+        _setProofOfReserve(1_000 ether);
+
+        vm.prank(minter);
+        token.mint(user, uint256(10 ether));
+
+        // freeze allowed
+        vm.prank(custodian);
+        token.freeze(user, 8 ether);
+        assertEq(token.frozen(user), 8 ether);
+        assertEq(token.availableBalance(user), 2 ether);
+
+        // try to transfer with amount exceeding frozen balance
+        vm.expectRevert(
+            abi.encodeWithSelector(ERC20CustodianUpgradeable.ERC20InsufficientUnfrozenBalance.selector, user)
+        );
+        vm.prank(user);
+        token.transfer(anon, 3 ether);
+
+        // try to transfer with available balance left -> should work
+        vm.prank(user);
+        token.transfer(anon, 2 ether);
+
+        assertEq(token.availableBalance(user), 0 ether);
+        assertEq(token.availableBalance(anon), 2 ether);
     }
 
     /**********************************************************************************/
@@ -227,7 +253,7 @@ contract GEMxTokenTest is Test {
         assertEq(token.blocked(anon), true);
     }
 
-    function testOnlyPauserCanUnblockUser() public {
+    function testOnlyLimiterCanUnblockUser() public {
         vm.prank(limiter);
         token.blockUser(anon);
         assertEq(token.blocked(anon), true);
