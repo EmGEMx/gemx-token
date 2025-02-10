@@ -12,5 +12,8 @@ docs/
 
 # Dotenv file
 .env
+
+# foundry and other code analysis artefacts
 /coverage
 src/artifacts/*
+remix-slither-report.json
