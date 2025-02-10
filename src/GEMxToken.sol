@@ -55,7 +55,7 @@ contract GEMxToken is
     //     _disableInitializers();
     // }
 
-    AggregatorV3Interface oracle;
+    AggregatorV3Interface private oracle;
 
     error NotEnoughReserve();
 
@@ -95,7 +95,7 @@ contract GEMxToken is
         _unblockUser(user);
     }
 
-    function getOracleAddress() public returns (address) {
+    function getOracleAddress() public view returns (address) {
         return address(oracle);
     }
 
