@@ -20,7 +20,8 @@ contract GEMxTokenTest is Test {
     address pauser = address(0x3);
     address custodian = address(0x4);
     address limiter = address(0x5);
-    address user = address(0x6);
+    address esuUpdater = address(0x6);
+    address user = makeAddr("user");
     address anon = makeAddr("anon");
 
     function setUp() public {
@@ -37,6 +38,7 @@ contract GEMxTokenTest is Test {
         token.grantRole(token.PAUSER_ROLE(), pauser);
         token.grantRole(token.CUSTODIAN_ROLE(), custodian);
         token.grantRole(token.LIMITER_ROLE(), limiter);
+        token.grantRole(token.ESU_ROLE(), esuUpdater);
         vm.stopPrank();
     }
 
@@ -46,10 +48,13 @@ contract GEMxTokenTest is Test {
         oracle.updateAnswer(value);
     }
 
-    function testTokenProperties() public {
+    function testTokenProperties() public view {
         assertEq(token.name(), "EmGemX Switzerland");
         assertEq(token.symbol(), "EmCH");
         assertEq(token.decimals(), 18);
+        (uint256 esu, uint256 esuPrecision) = token.getEsu();
+        assertEq(esu, 1);
+        assertEq(esuPrecision, 100);
     }
 
     function testMintRespectsProofOfReserve() public {
@@ -68,6 +73,35 @@ contract GEMxTokenTest is Test {
         vm.stopPrank();
 
         assertEq(token.balanceOf(user), 1_000 ether);
+    }
+
+    /*##################################################################################*/
+    /*###################################### ESU #######################################*/
+    /*##################################################################################*/
+
+    function testOnlyEsuUpdaterCanUpdateEsuValue() public {
+        (uint256 esu, uint256 esuPrecision) = token.getEsu();
+        assertEq(esu, 1);
+        assertEq(esuPrecision, 100);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user, token.ESU_ROLE())
+        );
+        vm.prank(user);
+        token.setEsu(9, 1000);
+
+        // values should not have changed
+        (esu, esuPrecision) = token.getEsu();
+        assertEq(esu, 1);
+        assertEq(esuPrecision, 100);
+
+        // ACT
+        vm.prank(esuUpdater);
+        token.setEsu(9, 1000);
+
+        (esu, esuPrecision) = token.getEsu();
+        assertEq(esu, 9);
+        assertEq(esuPrecision, 1000);
     }
 
     /*##################################################################################*/
@@ -357,22 +391,27 @@ contract GEMxTokenTest is Test {
         bytes32 role = token.MINTER_ROLE();
         vm.prank(admin);
         token.grantRole(role, newMinter);
-        assertTrue(token.hasRole(token.MINTER_ROLE(), newMinter));
+        assertTrue(token.hasRole(role, newMinter));
 
         role = token.PAUSER_ROLE();
         vm.prank(admin);
         token.grantRole(role, newMinter);
-        assertTrue(token.hasRole(token.PAUSER_ROLE(), newMinter));
+        assertTrue(token.hasRole(role, newMinter));
 
         role = token.CUSTODIAN_ROLE();
         vm.prank(admin);
         token.grantRole(role, newMinter);
-        assertTrue(token.hasRole(token.CUSTODIAN_ROLE(), newMinter));
+        assertTrue(token.hasRole(role, newMinter));
 
         role = token.LIMITER_ROLE();
         vm.prank(admin);
         token.grantRole(role, newMinter);
-        assertTrue(token.hasRole(token.LIMITER_ROLE(), newMinter));
+        assertTrue(token.hasRole(role, newMinter));
+
+        role = token.ESU_ROLE();
+        vm.prank(admin);
+        token.grantRole(role, newMinter);
+        assertTrue(token.hasRole(role, newMinter));
     }
 
     function testAdminCanRevoketRoles() public {
@@ -399,5 +438,11 @@ contract GEMxTokenTest is Test {
         vm.prank(admin);
         token.revokeRole(limiterRole, limiter);
         assertFalse(token.hasRole(limiterRole, limiter));
+
+        bytes32 esuUpdateRole = token.ESU_ROLE();
+        assertTrue(token.hasRole(esuUpdateRole, esuUpdater));
+        vm.prank(admin);
+        token.revokeRole(esuUpdateRole, esuUpdater);
+        assertFalse(token.hasRole(esuUpdateRole, esuUpdater));
     }
 }

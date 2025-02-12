@@ -46,6 +46,7 @@ contract GEMxToken is
     ERC20BlocklistUpgradeable
 {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bytes32 public constant ESU_ROLE = keccak256("ESU_ROLE"); // allowed to update esu value
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE"); // pause/unpause token
     bytes32 public constant CUSTODIAN_ROLE = keccak256("CUSTODIAN_ROLE"); // freeze/unfreeze tokens
     bytes32 public constant LIMITER_ROLE = keccak256("LIMITER_ROLE"); // block/unblock user
@@ -55,6 +56,8 @@ contract GEMxToken is
     //     _disableInitializers();
     // }
 
+    uint256 private esuValue = 1;
+    uint256 private esuPrecision = 100;
     AggregatorV3Interface private oracle;
 
     error NotEnoughReserve();
@@ -79,24 +82,33 @@ contract GEMxToken is
         _burn(account, value);
     }
 
-    function pause() public onlyRole(PAUSER_ROLE) {
+    function pause() external onlyRole(PAUSER_ROLE) {
         _pause();
     }
 
-    function unpause() public onlyRole(PAUSER_ROLE) {
+    function unpause() external onlyRole(PAUSER_ROLE) {
         _unpause();
     }
 
-    function blockUser(address user) public onlyRole(LIMITER_ROLE) {
+    function blockUser(address user) external onlyRole(LIMITER_ROLE) {
         _blockUser(user);
     }
 
-    function unblockUser(address user) public onlyRole(LIMITER_ROLE) {
+    function unblockUser(address user) external onlyRole(LIMITER_ROLE) {
         _unblockUser(user);
     }
 
-    function getOracleAddress() public view returns (address) {
+    function getOracleAddress() external view returns (address) {
         return address(oracle);
+    }
+
+    function getEsu() external view returns (uint256, uint256) {
+        return (esuValue, esuPrecision);
+    }
+
+    function setEsu(uint256 esu, uint256 precision) external onlyRole(ESU_ROLE) {
+        esuValue = esu;
+        esuPrecision = precision;
     }
 
     function _isCustodian(address user) internal view override returns (bool) {
