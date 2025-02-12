@@ -60,7 +60,7 @@ contract GEMxToken is
     error NotEnoughReserve();
 
     function initialize(address oracleAddres) public initializer {
-        __ERC20_init("GEMxToken", "GEMX");
+        __ERC20_init("EmGemX Switzerland", "EmCH");
         __ERC20Burnable_init();
         __ERC20Pausable_init();
         __AccessControl_init();

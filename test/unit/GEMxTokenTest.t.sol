@@ -46,6 +46,12 @@ contract GEMxTokenTest is Test {
         oracle.updateAnswer(value);
     }
 
+    function testTokenProperties() public {
+        assertEq(token.name(), "EmGemX Switzerland");
+        assertEq(token.symbol(), "EmCH");
+        assertEq(token.decimals(), 18);
+    }
+
     function testMintRespectsProofOfReserve() public {
         int256 reserve = 1_000 ether;
         _setProofOfReserve(reserve);
