@@ -64,9 +64,9 @@ contract GEMxTokenTest is Test {
         assertEq(token.balanceOf(user), 1_000 ether);
     }
 
-    /**********************************************************************************/
-    /**********************************  MINT/BURN  ***********************************/
-    /**********************************************************************************/
+    /*##################################################################################*/
+    /*################################### MINT/BURN ####################################*/
+    /*##################################################################################*/
 
     function testOnlyMinterCanMint() public {
         _setProofOfReserve(1_000 ether);
@@ -103,9 +103,9 @@ contract GEMxTokenTest is Test {
         assertEq(token.balanceOf(user), 9 ether);
     }
 
-    /**********************************************************************************/
-    /********************************  PAUSE/UNPAUSE  *********************************/
-    /**********************************************************************************/
+    /*##################################################################################*/
+    /*################################# PAUSE/UNPAUSE ##################################*/
+    /*##################################################################################*/
 
     function testOnlyPauserCanPause() public {
         vm.expectRevert(
@@ -124,7 +124,7 @@ contract GEMxTokenTest is Test {
         vm.prank(pauser);
         token.pause();
         assertEq(token.paused(), true);
-        
+
         // ACT
         vm.expectRevert(
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user, token.PAUSER_ROLE())
@@ -167,9 +167,9 @@ contract GEMxTokenTest is Test {
         assertEq(token.balanceOf(receiver), 2 ether);
     }
 
-    /**********************************************************************************/
-    /*******************************  FREEZE/UNFREEZE  ********************************/
-    /**********************************************************************************/
+    /*##################################################################################*/
+    /*################################ FREEZE/UNFREEZE #################################*/
+    /*##################################################################################*/
 
     // TODO: split into separate tests once modifier with test setup is implemented
     function testOnlyCustodianCanFreezeAndUnfreeze() public {
@@ -236,9 +236,9 @@ contract GEMxTokenTest is Test {
         assertEq(token.availableBalance(anon), 2 ether);
     }
 
-    /**********************************************************************************/
-    /********************************  BLOCK/UNBLOCK  *********************************/
-    /**********************************************************************************/
+    /*##################################################################################*/
+    /*################################# BLOCK/UNBLOCK ##################################*/
+    /*##################################################################################*/
 
     function testOnlyLimiterCanBlockUser() public {
         vm.expectRevert(
@@ -257,7 +257,7 @@ contract GEMxTokenTest is Test {
         vm.prank(limiter);
         token.blockUser(anon);
         assertEq(token.blocked(anon), true);
-        
+
         // ACT
         vm.expectRevert(
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user, token.LIMITER_ROLE())
@@ -290,17 +290,13 @@ contract GEMxTokenTest is Test {
         // neither sending nor receiving should work, basically receiver should keep 1 as initially sent!
 
         // receiving
-        vm.expectRevert(
-            abi.encodeWithSelector(ERC20BlocklistUpgradeable.ERC20Blocked.selector, receiver)
-        );
+        vm.expectRevert(abi.encodeWithSelector(ERC20BlocklistUpgradeable.ERC20Blocked.selector, receiver));
         vm.prank(user);
         token.transfer(receiver, 1 ether);
         assertEq(token.balanceOf(receiver), 1 ether, "Tokens should not be received");
 
         // sending
-        vm.expectRevert(
-            abi.encodeWithSelector(ERC20BlocklistUpgradeable.ERC20Blocked.selector, receiver)
-        );
+        vm.expectRevert(abi.encodeWithSelector(ERC20BlocklistUpgradeable.ERC20Blocked.selector, receiver));
         vm.prank(receiver);
         token.transfer(user, 1 ether);
         assertEq(token.balanceOf(receiver), 1 ether, "Tokens should not be moved");
@@ -331,9 +327,7 @@ contract GEMxTokenTest is Test {
         assertEq(token.blocked(user), true);
 
         // user should not be able approve others in case he is blocked
-        vm.expectRevert(
-            abi.encodeWithSelector(ERC20BlocklistUpgradeable.ERC20Blocked.selector, user)
-        );
+        vm.expectRevert(abi.encodeWithSelector(ERC20BlocklistUpgradeable.ERC20Blocked.selector, user));
         vm.prank(user);
         token.approve(anon, 1 ether);
         assertEq(token.allowance(user, anon), 0);
@@ -347,9 +341,9 @@ contract GEMxTokenTest is Test {
         assertEq(token.allowance(user, anon), 1 ether);
     }
 
-    /**********************************************************************************/
-    /*************************************  RBAC  *************************************/
-    /**********************************************************************************/
+    /*##################################################################################*/
+    /*##################################### RBAC #######################################*/
+    /*##################################################################################*/
 
     function testAdminCanGrantRoles() public {
         address newMinter = address(0x5);

@@ -46,9 +46,9 @@ contract GEMxToken is
     ERC20BlocklistUpgradeable
 {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
-    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");         // pause/unpause token
-    bytes32 public constant CUSTODIAN_ROLE = keccak256("CUSTODIAN_ROLE");   // freeze/unfreeze tokens
-    bytes32 public constant LIMITER_ROLE = keccak256("LIMITER_ROLE");       // block/unblock user
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE"); // pause/unpause token
+    bytes32 public constant CUSTODIAN_ROLE = keccak256("CUSTODIAN_ROLE"); // freeze/unfreeze tokens
+    bytes32 public constant LIMITER_ROLE = keccak256("LIMITER_ROLE"); // block/unblock user
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     // constructor() {
@@ -123,7 +123,7 @@ contract GEMxToken is
     }
 
     function _getProofOfReserve() private view returns (uint256) {
-        (, int256 answer, , ,) = oracle.latestRoundData();
+        (, int256 answer,,,) = oracle.latestRoundData();
 
         return uint256(answer);
     }
