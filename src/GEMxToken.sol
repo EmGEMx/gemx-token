@@ -135,7 +135,13 @@ contract GEMxToken is
     }
 
     function _getProofOfReserve() private view returns (uint256) {
-        (, int256 answer,,,) = oracle.latestRoundData();
+        (
+            /* uint80 roundID */,
+            int answer,
+            /*uint startedAt*/,
+            /*uint timeStamp*/,
+            /*uint80 answeredInRound*/
+        ) = oracle.latestRoundData();
 
         return uint256(answer);
     }
