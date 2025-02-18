@@ -414,7 +414,7 @@ contract GEMxTokenTest is Test {
         assertTrue(token.hasRole(role, newMinter));
     }
 
-    function testAdminCanRevoketRoles() public {
+    function testAdminCanRevokeRoles() public {
         bytes32 minteRole = token.MINTER_ROLE();
         assertTrue(token.hasRole(minteRole, minter));
         vm.prank(admin);
