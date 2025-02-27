@@ -1,66 +1,63 @@
-## Foundry
+# EmGEMx Token
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+| Property                  | Value                                       |
+| ------------------------- | ------------------------------------------- |
+| Name                      | EmGemX Switzerland                          |
+| Symbol                    | EmCH                                        |
+| Issuer                    | GemX AG, Zug, CH                            |
+| Number of Tokens          | Variable                                    |
+| Number of Decimals        | 18                                          |
+| Type                      | Crypto Asset (Asset Token)                  |
+| Use Case                  | Tokenized Emeralds                          |
+| Underlying Asset          | Emeralds                                    |
+| Transferable              | Yes                                         |
+| Transaction Fee           | No                                          |
+| Burn Fee                  | No                                          |
+| Initial Price             | Depends on ESU                              |
+| Distribution              | Proof-of-Reserve + Buy/DEX/CEX              |
+| Technical Base            | ERC-20 on Avalanche                         |
+| Public Tradeable          | Yes                                         |
+| Governance Function       | No                                          |
+| Allowlist                 | No                                          |
+| Blocklist                 | Yes                                         |
+| Mintable                  | Yes (redeem)                                |
+| Burnable                  | Yes (redeem)                                |
+| Pausable                  | Yes (all)                                   |
+| Roles                     | Owner, Minter, Redeem                       |
+| Force Transfer (Clawback) | Yes/No (TBD)                                |
+| Max Tokens per Address    | No limit                                    |
+| Upgradeable               | Yes                                         |
+| Cross-Chain               | Yes (Ethereum, etc.) – CCIP            |
+| Other features            | Emerald Standard Unit, Minting based on PoR |
 
-Foundry consists of:
+## Build, Test, Deploy
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+### Install
 
-## Documentation
-
-https://book.getfoundry.sh/
-
-## Usage
+```shell
+$ make install
+```
 
 ### Build
 
 ```shell
-$ forge build
+$ make build
 ```
 
 ### Test
 
 ```shell
-$ forge test
+$ make test
 ```
 
-### Format
+### Coverage
 
 ```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
+$ make coverage
 ```
 
 ### Deploy
 
 ```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
+$ forge script script/DeployToken.s.sol:DeployToken
 ```

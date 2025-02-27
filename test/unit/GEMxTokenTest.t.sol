@@ -27,6 +27,8 @@ contract GEMxTokenTest is Test {
     function setUp() public {
         admin = makeAddr("Admin");
 
+        vm.setEnv("TOKEN_NAME", "EmGemX Switzerland");
+        vm.setEnv("TOKEN_SYMBOL", "EmCH");
         DeployToken deployer = new DeployToken();
         token = deployer.run();
         oracle = MockV3Aggregator(token.getOracleAddress());
@@ -54,7 +56,7 @@ contract GEMxTokenTest is Test {
         assertEq(token.decimals(), 18);
         (uint256 esu, uint256 esuPrecision) = token.getEsu();
         assertEq(esu, 1);
-        assertEq(esuPrecision, 100);
+        assertEq(esuPrecision, 1000);
     }
 
     function testMintRespectsProofOfReserve() public {
@@ -82,26 +84,26 @@ contract GEMxTokenTest is Test {
     function testOnlyEsuUpdaterCanUpdateEsuValue() public {
         (uint256 esu, uint256 esuPrecision) = token.getEsu();
         assertEq(esu, 1);
-        assertEq(esuPrecision, 100);
+        assertEq(esuPrecision, 1000);
 
         vm.expectRevert(
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user, token.ESU_ROLE())
         );
         vm.prank(user);
-        token.setEsu(9, 1000);
+        token.setEsuValue(9, 10000);
 
         // values should not have changed
         (esu, esuPrecision) = token.getEsu();
         assertEq(esu, 1);
-        assertEq(esuPrecision, 100);
+        assertEq(esuPrecision, 1000);
 
         // ACT
         vm.prank(esuUpdater);
-        token.setEsu(9, 1000);
+        token.setEsuValue(9, 10000);
 
         (esu, esuPrecision) = token.getEsu();
         assertEq(esu, 9);
-        assertEq(esuPrecision, 1000);
+        assertEq(esuPrecision, 10000);
     }
 
     /*##################################################################################*/

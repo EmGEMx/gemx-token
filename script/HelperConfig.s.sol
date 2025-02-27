@@ -21,6 +21,10 @@ contract HelperConfig is Script {
             activeNetworkConfig = getSepoliaEthConfig();
         } else if (block.chainid == 43113) {
             activeNetworkConfig = getFujiEthConfig();
+        } else if (block.chainid == 43114) {
+            activeNetworkConfig = getAvalancheEthConfig();
+        } else if (block.chainid == 1) {
+            activeNetworkConfig = getMainnetEthConfig();
         } else {
             activeNetworkConfig = getOrCreateAnvilEthConfig();
         }
@@ -32,6 +36,14 @@ contract HelperConfig is Script {
 
     function getFujiEthConfig() public pure returns (NetworkConfig memory fujiNetworkConfig) {
         fujiNetworkConfig = NetworkConfig({proofOfReserveOracle: address(0x0)});
+    }
+
+    function getAvalancheEthConfig() public pure returns (NetworkConfig memory avalancheNetworkConfig) {
+        avalancheNetworkConfig = NetworkConfig({proofOfReserveOracle: address(0x0)});
+    }
+
+    function getMainnetEthConfig() public pure returns (NetworkConfig memory mainnetNetworkConfig) {
+        mainnetNetworkConfig = NetworkConfig({proofOfReserveOracle: address(0x0)});
     }
 
     function getOrCreateAnvilEthConfig() public returns (NetworkConfig memory anvilNetworkConfig) {

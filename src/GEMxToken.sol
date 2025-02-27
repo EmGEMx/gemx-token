@@ -45,25 +45,28 @@ contract GEMxToken is
     ERC20CustodianUpgradeable,
     ERC20BlocklistUpgradeable
 {
+    error NotEnoughReserve();
+
+    AggregatorV3Interface private oracle;
+
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant ESU_ROLE = keccak256("ESU_ROLE"); // allowed to update esu value
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE"); // pause/unpause token
     bytes32 public constant CUSTODIAN_ROLE = keccak256("CUSTODIAN_ROLE"); // freeze/unfreeze tokens
     bytes32 public constant LIMITER_ROLE = keccak256("LIMITER_ROLE"); // block/unblock user
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    // constructor() {
-    //     _disableInitializers();
-    // }
+    /*
+    ESU Calculation:    TODO: this needs to be confirmed!
+    - ESU value is written by chainlink
+    - Token has an esu_per_token value
+    - max_tokens = esu * esu_per_token
+    */
 
-    uint256 private esuValue = 1;
-    uint256 private esuPrecision = 100;
-    AggregatorV3Interface private oracle;
+    uint256 private esuPerTokenValue = 1;
+    uint256 private esuPerTokenPrecision = 1000;
 
-    error NotEnoughReserve();
-
-    function initialize(address oracleAddres) public initializer {
-        __ERC20_init("EmGemX Switzerland", "EmCH");
+    function initialize(address oracleAddres, string memory name, string memory symbol) public initializer {
+        __ERC20_init(name, symbol);
         __ERC20Burnable_init();
         __ERC20Pausable_init();
         __AccessControl_init();
@@ -102,13 +105,14 @@ contract GEMxToken is
         return address(oracle);
     }
 
+    // TODO: ESU and PoR logic still be confirmed!
     function getEsu() external view returns (uint256, uint256) {
-        return (esuValue, esuPrecision);
+        return (esuPerTokenValue, esuPerTokenPrecision);
     }
 
-    function setEsu(uint256 esu, uint256 precision) external onlyRole(ESU_ROLE) {
-        esuValue = esu;
-        esuPrecision = precision;
+    function setEsuValue(uint256 esu, uint256 precision) external onlyRole(ESU_ROLE) {
+        esuPerTokenValue = esu;
+        esuPerTokenPrecision = precision;
     }
 
     function _isCustodian(address user) internal view override returns (bool) {
@@ -136,10 +140,13 @@ contract GEMxToken is
 
     function _getProofOfReserve() private view returns (uint256) {
         (
-            /* uint80 roundID */,
-            int answer,
-            /*uint startedAt*/,
-            /*uint timeStamp*/,
+            /* uint80 roundID */
+            ,
+            int256 answer,
+            /*uint startedAt*/
+            ,
+            /*uint timeStamp*/
+            ,
             /*uint80 answeredInRound*/
         ) = oracle.latestRoundData();
 

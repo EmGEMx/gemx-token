@@ -16,7 +16,11 @@ contract DeployToken is Script {
 
         token = new GEMxToken();
         (address proofOfReserveOracle) = helperConfig.activeNetworkConfig();
-        token.initialize(proofOfReserveOracle);
+
+        string memory tokenName = vm.envString("TOKEN_NAME"); // "EmGemX Switzerland"
+        string memory tokenSymbol = vm.envString("TOKEN_SYMBOL"); // "EmCH"
+
+        token.initialize(proofOfReserveOracle, tokenName, tokenSymbol);
 
         vm.stopBroadcast();
 
