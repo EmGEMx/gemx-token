@@ -2,7 +2,7 @@
 pragma solidity 0.8.20;
 
 import {MockV3Aggregator} from "../test/mocks/MockV3Aggregator.sol";
-import {Script} from "forge-std/Script.sol";
+import {Script, console} from "forge-std/Script.sol";
 
 contract HelperConfig is Script {
     NetworkConfig public activeNetworkConfig;
@@ -18,31 +18,37 @@ contract HelperConfig is Script {
 
     constructor() {
         if (block.chainid == 11155111) {
+            // Ethereum Sepolia
             activeNetworkConfig = getSepoliaEthConfig();
         } else if (block.chainid == 43113) {
+            // Avalanche Fuji Testnet
             activeNetworkConfig = getFujiEthConfig();
         } else if (block.chainid == 43114) {
+            // Avalanche C-Chain Mainnet
             activeNetworkConfig = getAvalancheEthConfig();
         } else if (block.chainid == 1) {
+            // Ethereum Mainnet
             activeNetworkConfig = getMainnetEthConfig();
         } else {
             activeNetworkConfig = getOrCreateAnvilEthConfig();
         }
     }
 
-    function getSepoliaEthConfig() public pure returns (NetworkConfig memory sepoliaNetworkConfig) {
+    function getSepoliaEthConfig() public /*pure*/ returns (NetworkConfig memory sepoliaNetworkConfig) {
         sepoliaNetworkConfig = NetworkConfig({proofOfReserveOracle: address(0x0)});
     }
 
-    function getFujiEthConfig() public pure returns (NetworkConfig memory fujiNetworkConfig) {
+    function getFujiEthConfig() public /*pure*/ returns (NetworkConfig memory fujiNetworkConfig) {
         fujiNetworkConfig = NetworkConfig({proofOfReserveOracle: address(0x0)});
     }
 
     function getAvalancheEthConfig() public pure returns (NetworkConfig memory avalancheNetworkConfig) {
+        revert("Feed address missing");
         avalancheNetworkConfig = NetworkConfig({proofOfReserveOracle: address(0x0)});
     }
 
     function getMainnetEthConfig() public pure returns (NetworkConfig memory mainnetNetworkConfig) {
+        revert("Feed address missing");
         mainnetNetworkConfig = NetworkConfig({proofOfReserveOracle: address(0x0)});
     }
 
@@ -52,10 +58,7 @@ contract HelperConfig is Script {
             return activeNetworkConfig;
         }
 
-        vm.startBroadcast();
-        MockV3Aggregator proofOfReserveFeed = new MockV3Aggregator(PROOF_OF_RESERVE_MOCK);
-        vm.stopBroadcast();
-
-        anvilNetworkConfig = NetworkConfig({proofOfReserveOracle: address(proofOfReserveFeed)});
+        MockV3Aggregator mock = new MockV3Aggregator(PROOF_OF_RESERVE_MOCK);
+        anvilNetworkConfig = NetworkConfig({proofOfReserveOracle: address(mock)});
     }
 }

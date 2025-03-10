@@ -25,6 +25,7 @@
 pragma solidity ^0.8.20;
 
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import {ERC20BurnableUpgradeable} from
     "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
@@ -42,6 +43,7 @@ contract GEMxToken is
     ERC20BurnableUpgradeable,
     ERC20PausableUpgradeable,
     AccessControlUpgradeable,
+    OwnableUpgradeable,
     ERC20CustodianUpgradeable,
     ERC20BlocklistUpgradeable
 {
@@ -70,9 +72,13 @@ contract GEMxToken is
         __ERC20Burnable_init();
         __ERC20Pausable_init();
         __AccessControl_init();
+        __Ownable_init(_msgSender());
         _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setRoleAdmin(MINTER_ROLE, DEFAULT_ADMIN_ROLE);
+        _setRoleAdmin(ESU_ROLE, DEFAULT_ADMIN_ROLE);
         _setRoleAdmin(PAUSER_ROLE, DEFAULT_ADMIN_ROLE);
+        _setRoleAdmin(CUSTODIAN_ROLE, DEFAULT_ADMIN_ROLE);
+        _setRoleAdmin(LIMITER_ROLE, DEFAULT_ADMIN_ROLE);
 
         oracle = AggregatorV3Interface(oracleAddres);
     }

@@ -38,8 +38,17 @@ slither         :; slither src/GEMxToken.sol --triage-mode
 NETWORK_ARGS := --rpc-url http://localhost:8545 --private-key $(DEFAULT_ANVIL_KEY) --broadcast
 
 ifeq ($(findstring --network sepolia,$(ARGS)),--network sepolia)
-	NETWORK_ARGS := --rpc-url $(SEPOLIA_RPC_URL) --broadcast --verify --etherscan-api-key $(ETHERSCAN_API_KEY) -vvvv
+	NETWORK_ARGS := --rpc-url $(SEPOLIA_RPC_URL) --broadcast --slow --verify --etherscan-api-key $(ETHERSCAN_API_KEY) -vvvv
+else ifeq ($(findstring --network fuji,$(ARGS)),--network fuji)
+	NETWORK_ARGS := --rpc-url $(AVALANCHE_FUJI_RPC_URL) --broadcast --slow --verify --etherscan-api-key "verifyContract" --verifier-url 'https://api.routescan.io/v2/network/testnet/evm/43113/etherscan' -vvvv
 endif
 
 deploy:
 	@forge script script/DeployToken.s.sol:DeployToken $(NETWORK_ARGS)
+
+# mkdir -p keystores/emgemx && cast wallet new keystores/emgemx
+# cast wallet import -k keystores emgemx_deployer -- interactive
+# cast wallet list --dir keystores
+
+# make deploy ARGS="--network sepolia"
+# make deploy ARGS="--network fuji"
