@@ -96,6 +96,10 @@ contract GEMxToken is
         return address(oracle);
     }
 
+    function setOracleAddress(address newAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        oracle = AggregatorV3Interface(newAddress);
+    }
+
     function getEsuPerToken() external view returns (uint256, uint256) {
         return (esuPerTokenValue, esuPerTokenPrecision);
     }
