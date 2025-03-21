@@ -35,7 +35,7 @@ contract GEMxTokenTest is Test {
         token = deployer.run();
         oracle = MockV3Aggregator(token.getOracleAddress());
 
-        vm.chainId(token.parentChainId()); // set chain token's parent chain to enable full feature set with minting restrictio
+        vm.chainId(token.PARENT_CHAIN_ID()); // set chain token's parent chain to enable full feature set with minting restrictio
 
         // Grant roles
         vm.startPrank(DEFAULT_SENDER);
@@ -64,7 +64,7 @@ contract GEMxTokenTest is Test {
     /*##################################################################################*/
 
     function testMintOnAvalancheParentChainRespectsEsuOracle_And_EsuPerTokenSetting() public {
-        vm.chainId(token.parentChainId());
+        vm.chainId(token.PARENT_CHAIN_ID());
 
         int256 esu = 100 ether;
         _setEsu(esu);
@@ -137,7 +137,7 @@ contract GEMxTokenTest is Test {
     }
 
     function testVerifyEsuCalculation() public {
-        vm.chainId(token.parentChainId());
+        vm.chainId(token.PARENT_CHAIN_ID());
 
         (uint256 esu, uint256 esuPrecision) = token.getEsuPerToken();
         assertEq(esu, 1);

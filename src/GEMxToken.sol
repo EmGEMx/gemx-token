@@ -17,13 +17,15 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {AggregatorV3Interface} from "@chainlink/contracts/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 contract GEMxToken is
+    Initializable,
     ERC20Upgradeable,
     ERC20BurnableUpgradeable,
     ERC20PausableUpgradeable,
     AccessControlUpgradeable,
     OwnableUpgradeable,
     ERC20CustodianUpgradeable,
-    ERC20BlocklistUpgradeable
+    ERC20BlocklistUpgradeable,
+    ERC20PermitUpgradeable
 {
     error NotEnoughReserve();
 
@@ -36,7 +38,7 @@ contract GEMxToken is
     bytes32 public constant LIMITER_ROLE = keccak256("LIMITER_ROLE"); // block/unblock user
 
     /// @dev Controls whether minting restriction is active (on parent chain) or not (on any other chain).
-    uint256 public constant parentChainId = 43114; // Avalanche C-Chain
+    uint256 public constant PARENT_CHAIN_ID = 43114; // Avalanche C-Chain
 
     /*
     ESU Calculation:
@@ -109,7 +111,7 @@ contract GEMxToken is
 
     function getMaxSupply() public view returns (uint256) {
         // no max supply restriction on child chains
-        if (block.chainid != parentChainId) {
+        if (block.chainid != PARENT_CHAIN_ID) {
             return type(uint256).max;
         }
 
@@ -126,7 +128,7 @@ contract GEMxToken is
     {
         // make sure it cannot be minted more than proof of reserve! Only to be checked on parent source chain
         // Code is located here (and not in mint()) so that the logic it is always checked - even if _mint is called from any place)0
-        if (block.chainid == parentChainId) {
+        if (block.chainid == PARENT_CHAIN_ID) {
             if (from == address(0) && totalSupply() + amount > getMaxSupply()) {
                 revert NotEnoughReserve();
             }

@@ -15,13 +15,13 @@ contract DeployToken is Script {
 
         vm.startBroadcast();
 
-        (address proofOfReserveOracle) = helperConfig.activeNetworkConfig();
-        if (proofOfReserveOracle == address(0x0)) {
+        (address esuOracle) = helperConfig.activeNetworkConfig();
+        if (esuOracle == address(0x0)) {
             uint256 mockValue = helperConfig.PROOF_OF_RESERVE_MOCK();
             MockV3Aggregator mock = createProofOrReserveMock(mockValue);
-            proofOfReserveOracle = address(mock);
+            esuOracle = address(mock);
         }
-        console.log("Oracle address:", proofOfReserveOracle);
+        console.log("Oracle address:", esuOracle);
 
         token = new GEMxToken();
         console.log("Token address:", address(token));
@@ -29,7 +29,7 @@ contract DeployToken is Script {
         string memory tokenName = vm.envString("TOKEN_NAME"); // "EmGEMx Switzerland"
         string memory tokenSymbol = vm.envString("TOKEN_SYMBOL"); // "EmCH"
 
-        token.initialize(proofOfReserveOracle, tokenName, tokenSymbol);
+        token.initialize(esuOracle, tokenName, tokenSymbol);
 
         vm.stopBroadcast();
 
