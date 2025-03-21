@@ -68,7 +68,9 @@ contract GEMxTokenTest is Test {
         MockV3Aggregator newOracle = new MockV3Aggregator(1000);
 
         vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user, token.DEFAULT_ADMIN_ROLE())
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, user, token.DEFAULT_ADMIN_ROLE()
+            )
         );
         vm.prank(user);
         token.setOracleAddress(address(newOracle));
