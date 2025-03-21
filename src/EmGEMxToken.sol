@@ -16,7 +16,7 @@ import {ERC20BlocklistUpgradeable} from "./ERC20BlocklistUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
-contract GEMxToken is
+contract EmGEMxToken is
     Initializable,
     ERC20Upgradeable,
     ERC20BurnableUpgradeable,

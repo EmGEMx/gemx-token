@@ -7,13 +7,13 @@ import {PausableUpgradeable} from
     "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
 import {ERC20CustodianUpgradeable} from "../../src/ERC20CustodianUpgradeable.sol";
 import {ERC20BlocklistUpgradeable} from "../../src/ERC20BlocklistUpgradeable.sol";
-import {GEMxToken} from "../../src/GEMxToken.sol";
+import {EmGEMxToken} from "../../src/EmGEMxToken.sol";
 import {DeployToken} from "../../script/DeployToken.s.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {MockV3Aggregator} from "../mocks/MockV3Aggregator.sol";
 
-contract GEMxTokenTest is Test {
-    GEMxToken private token;
+contract EmGEMxTokenTest is Test {
+    EmGEMxToken private token;
     MockV3Aggregator private oracle;
     address admin = address(0x1);
     address minter = address(0x2);
@@ -103,7 +103,7 @@ contract GEMxTokenTest is Test {
         assertEq(token.totalSupply(), 10_000 ether);
 
         // ACT
-        vm.expectRevert(GEMxToken.NotEnoughReserve.selector);
+        vm.expectRevert(EmGEMxToken.NotEnoughReserve.selector);
         token.mint(user, 1);
         vm.stopPrank();
 

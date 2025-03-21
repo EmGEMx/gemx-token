@@ -4,13 +4,13 @@ pragma solidity 0.8.20;
 //import {Script, console} from "forge-std/Script.sol"; // not recognized by VS Code
 import {Script, console} from "lib/forge-std/src/Script.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
-import {GEMxToken} from "../src/GEMxToken.sol";
+import {EmGEMxToken} from "../src/EmGEMxToken.sol";
 import {MockV3Aggregator} from "../test/mocks/MockV3Aggregator.sol";
 
 contract DeployToken is Script {
-    GEMxToken public token;
+    EmGEMxToken public token;
 
-    function run() public returns (GEMxToken) {
+    function run() public returns (EmGEMxToken) {
         HelperConfig helperConfig = new HelperConfig();
 
         vm.startBroadcast();
@@ -23,7 +23,7 @@ contract DeployToken is Script {
         }
         console.log("Oracle address:", esuOracle);
 
-        token = new GEMxToken();
+        token = new EmGEMxToken();
         console.log("Token address:", address(token));
 
         string memory tokenName = vm.envString("TOKEN_NAME"); // "EmGEMx Switzerland"
