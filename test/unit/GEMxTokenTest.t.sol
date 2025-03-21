@@ -60,6 +60,26 @@ contract GEMxTokenTest is Test {
     }
 
     /*##################################################################################*/
+    /*################################# Oracle Update ##################################*/
+    /*##################################################################################*/
+
+    function testOnlyAdminCanUpdateOracle() public {
+        address currentOracleAddress = token.getOracleAddress();
+        MockV3Aggregator newOracle = new MockV3Aggregator(1000);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user, token.DEFAULT_ADMIN_ROLE())
+        );
+        vm.prank(user);
+        token.setOracleAddress(address(newOracle));
+        assertEq(token.getOracleAddress(), currentOracleAddress);
+
+        vm.prank(admin);
+        token.setOracleAddress(address(newOracle));
+        assertEq(token.getOracleAddress(), address(newOracle));
+    }
+
+    /*##################################################################################*/
     /*###################################### ESU #######################################*/
     /*##################################################################################*/
 
@@ -132,7 +152,6 @@ contract GEMxTokenTest is Test {
         token.setEsuPerToken(9, 10000);
 
         (esu, esuPrecision) = token.getEsuPerToken();
-
         assertEq(esu, 9);
         assertEq(esuPrecision, 10000);
     }
