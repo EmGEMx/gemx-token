@@ -7,8 +7,7 @@ import {Script, console} from "forge-std/Script.sol";
 contract HelperConfig is Script {
     NetworkConfig public activeNetworkConfig;
 
-    uint8 public constant DECIMALS = 18;
-    int256 public constant PROOF_OF_RESERVE_MOCK = 100_000;
+    uint256 public constant PROOF_OF_RESERVE_MOCK = 10_000;
 
     uint256 public DEFAULT_ANVIL_PRIVATE_KEY = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
 
@@ -34,12 +33,13 @@ contract HelperConfig is Script {
         }
     }
 
-    function getSepoliaEthConfig() public /*pure*/ returns (NetworkConfig memory sepoliaNetworkConfig) {
-        sepoliaNetworkConfig = NetworkConfig({proofOfReserveOracle: address(0x0)});
+    function getSepoliaEthConfig() public pure returns (NetworkConfig memory sepoliaNetworkConfig) {
+        // no oracle on other chains than Avalanche
+        sepoliaNetworkConfig = NetworkConfig({proofOfReserveOracle: 0x8D26D407ebed4D03dE7c18f5Db913155a4D587AE});
     }
 
-    function getFujiEthConfig() public /*pure*/ returns (NetworkConfig memory fujiNetworkConfig) {
-        fujiNetworkConfig = NetworkConfig({proofOfReserveOracle: address(0x0)});
+    function getFujiEthConfig() public pure returns (NetworkConfig memory fujiNetworkConfig) {
+        fujiNetworkConfig = NetworkConfig({proofOfReserveOracle: 0x8F1C8888fBcd9Cc5D732df1e146d399a21899c22});
     }
 
     function getAvalancheEthConfig() public pure returns (NetworkConfig memory avalancheNetworkConfig) {
@@ -48,17 +48,19 @@ contract HelperConfig is Script {
     }
 
     function getMainnetEthConfig() public pure returns (NetworkConfig memory mainnetNetworkConfig) {
-        revert("Feed address missing");
+        // no oracle on other chains than Avalanche
         mainnetNetworkConfig = NetworkConfig({proofOfReserveOracle: address(0x0)});
     }
 
-    function getOrCreateAnvilEthConfig() public returns (NetworkConfig memory anvilNetworkConfig) {
+    function getOrCreateAnvilEthConfig() public view returns (NetworkConfig memory anvilNetworkConfig) {
         // Check to see if we set an active network config
         if (activeNetworkConfig.proofOfReserveOracle != address(0)) {
             return activeNetworkConfig;
         }
 
-        MockV3Aggregator mock = new MockV3Aggregator(PROOF_OF_RESERVE_MOCK);
-        anvilNetworkConfig = NetworkConfig({proofOfReserveOracle: address(mock)});
+        //MockV3Aggregator mock = new MockV3Aggregator(PROOF_OF_RESERVE_MOCK);
+        //console.log("Anvil oracle mock:", address(mock));
+        //anvilNetworkConfig = NetworkConfig({proofOfReserveOracle: address(mock)});
+        anvilNetworkConfig = NetworkConfig({proofOfReserveOracle: address(0x0)});
     }
 }

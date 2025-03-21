@@ -20,18 +20,22 @@ contract GEMxTokenTest is Test {
     address pauser = address(0x3);
     address custodian = address(0x4);
     address limiter = address(0x5);
-    address esuUpdater = address(0x6);
+    address esuPerTokenModifier = address(0x6);
     address user = makeAddr("user");
     address anon = makeAddr("anon");
+
+    event TokensFrozen(address indexed user, uint256 amount);
 
     function setUp() public {
         admin = makeAddr("Admin");
 
-        vm.setEnv("TOKEN_NAME", "EmGemX Switzerland");
+        vm.setEnv("TOKEN_NAME", "EmGEMx Switzerland");
         vm.setEnv("TOKEN_SYMBOL", "EmCH");
         DeployToken deployer = new DeployToken();
         token = deployer.run();
         oracle = MockV3Aggregator(token.getOracleAddress());
+
+        vm.chainId(token.parentChainId()); // set chain token's parent chain to enable full feature set with minting restrictio
 
         // Grant roles
         vm.startPrank(DEFAULT_SENDER);
@@ -40,70 +44,131 @@ contract GEMxTokenTest is Test {
         token.grantRole(token.PAUSER_ROLE(), pauser);
         token.grantRole(token.CUSTODIAN_ROLE(), custodian);
         token.grantRole(token.LIMITER_ROLE(), limiter);
-        token.grantRole(token.ESU_ROLE(), esuUpdater);
+        token.grantRole(token.ESU_PER_TOKEN_MODIFIER_ROLE(), esuPerTokenModifier);
         vm.stopPrank();
     }
 
     // TODO: set up invariant testing. Inveriant of the system: it should never be possible to mint more than allowed by ESU and PoR!
 
-    function _setProofOfReserve(int256 value) private {
-        oracle.updateAnswer(value);
-    }
-
     function testTokenProperties() public view {
-        assertEq(token.name(), "EmGemX Switzerland");
+        assertEq(token.name(), "EmGEMx Switzerland");
         assertEq(token.symbol(), "EmCH");
-        assertEq(token.decimals(), 18);
-        (uint256 esu, uint256 esuPrecision) = token.getEsu();
-        assertEq(esu, 1);
-        assertEq(esuPrecision, 1000);
-    }
-
-    function testMintRespectsProofOfReserve() public {
-        int256 reserve = 1_000 ether;
-        _setProofOfReserve(reserve);
-
-        vm.startPrank(minter);
-        token.mint(user, 500 ether);
-        assertEq(token.totalSupply(), 500 ether);
-
-        token.mint(user, 500 ether);
-        assertEq(token.totalSupply(), 1_000 ether);
-
-        vm.expectRevert(GEMxToken.NotEnoughReserve.selector);
-        token.mint(user, 1);
-        vm.stopPrank();
-
-        assertEq(token.balanceOf(user), 1_000 ether);
+        assertEq(token.decimals(), 8);
+        (uint256 esu, uint256 esuPrecision) = token.getEsuPerToken();
+        assertEq(esu, 1, "Initial EsuPerToken is 0.01");
+        assertEq(esuPrecision, 100, "Initial EsuPerToken is 0.01");
     }
 
     /*##################################################################################*/
     /*###################################### ESU #######################################*/
     /*##################################################################################*/
 
-    function testOnlyEsuUpdaterCanUpdateEsuValue() public {
-        (uint256 esu, uint256 esuPrecision) = token.getEsu();
-        assertEq(esu, 1);
-        assertEq(esuPrecision, 1000);
+    function testMintOnAvalancheParentChainRespectsEsuOracle_And_EsuPerTokenSetting() public {
+        vm.chainId(token.parentChainId());
 
-        vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user, token.ESU_ROLE())
-        );
-        vm.prank(user);
-        token.setEsuValue(9, 10000);
+        int256 esu = 100 ether;
+        _setEsu(esu);
 
-        // values should not have changed
-        (esu, esuPrecision) = token.getEsu();
-        assertEq(esu, 1);
-        assertEq(esuPrecision, 1000);
+        uint256 maxSupply = token.getMaxSupply();
+        console.log("Allowed MaxSupply:", maxSupply);
+        assertEq(maxSupply, 10_000 ether, "Parameters changed - Arrange needs to be adjusted");
+
+        vm.startPrank(minter);
+        token.mint(user, 5000 ether);
+        assertEq(token.totalSupply(), 5000 ether);
+
+        token.mint(user, 5000 ether);
+        assertEq(token.totalSupply(), 10_000 ether);
 
         // ACT
-        vm.prank(esuUpdater);
-        token.setEsuValue(9, 10000);
+        vm.expectRevert(GEMxToken.NotEnoughReserve.selector);
+        token.mint(user, 1);
+        vm.stopPrank();
 
-        (esu, esuPrecision) = token.getEsu();
+        assertEq(token.balanceOf(user), 10_000 ether);
+    }
+
+    function testMintOnChildChainHasNoRestriction() public {
+        vm.chainId(1); // e.g. ethereum mainnet
+
+        int256 esu = 100 ether;
+        _setEsu(esu);
+
+        uint256 maxSupply = token.getMaxSupply();
+        assertEq(maxSupply, type(uint256).max);
+
+        // ACT
+        vm.startPrank(minter);
+        token.mint(user, 1_000_000 ether);
+        assertEq(token.totalSupply(), 1_000_000 ether);
+
+        assertEq(token.balanceOf(user), 1_000_000 ether);
+    }
+
+    function _setEsu(int256 value) private {
+        oracle.updateAnswer(value);
+    }
+
+    function testOnlyEsuPerTokenModifierCanUpdateEsuPerTokenValue() public {
+        (uint256 esu, uint256 esuPrecision) = token.getEsuPerToken();
+        assertEq(esu, 1);
+        assertEq(esuPrecision, 100);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, user, token.ESU_PER_TOKEN_MODIFIER_ROLE()
+            )
+        );
+        vm.prank(user);
+        token.setEsuPerToken(9, 10000);
+
+        // values should not have changed
+        (esu, esuPrecision) = token.getEsuPerToken();
+        assertEq(esu, 1, "Esu value should not have changed");
+        assertEq(esuPrecision, 100, "Esu precision should not have changed");
+
+        // ACT
+        vm.prank(esuPerTokenModifier);
+        token.setEsuPerToken(9, 10000);
+
+        (esu, esuPrecision) = token.getEsuPerToken();
         assertEq(esu, 9);
         assertEq(esuPrecision, 10000);
+    }
+
+    function testVerifyEsuCalculation() public {
+        vm.chainId(token.parentChainId());
+
+        (uint256 esu, uint256 esuPrecision) = token.getEsuPerToken();
+        assertEq(esu, 1);
+        assertEq(esuPrecision, 100); // 0.01 ether
+
+        _setEsu(2521130000000000000000); // 2521.13
+        uint256 maxSupplyWei = token.getMaxSupply();
+        assertEq(maxSupplyWei, 252_113 ether);
+
+        _setEsu(2521130000000000000000); // 2521.13
+        vm.prank(esuPerTokenModifier);
+        token.setEsuPerToken(99, 10000); // 0.0099
+        maxSupplyWei = token.getMaxSupply();
+        assertEq(roundTwoDecimals(maxSupplyWei), 254_659_60 ether / 100); // 254659.60
+
+        _setEsu(3871130000000000000000); // 3871.13
+        vm.prank(esuPerTokenModifier);
+        token.setEsuPerToken(9801, 1_000_000); // 0.009801
+        maxSupplyWei = token.getMaxSupply();
+        assertEq(roundTwoDecimals(maxSupplyWei), 394_972_96 ether / 100); // 394972.96
+    }
+
+    function roundTwoDecimals(uint256 value) private pure returns (uint256) {
+        // Define the rounding factor for 0.01 ether (10^16 wei)
+        uint256 roundingFactor = 10 ** 16;
+
+        // Add half of the rounding factor to the value for proper rounding
+        uint256 roundedValue = (value + (roundingFactor / 2)) / roundingFactor;
+
+        // Multiply back to get the rounded wei value
+        return roundedValue * roundingFactor;
     }
 
     /*##################################################################################*/
@@ -111,7 +176,7 @@ contract GEMxTokenTest is Test {
     /*##################################################################################*/
 
     function testOnlyMinterCanMint() public {
-        _setProofOfReserve(1_000 ether);
+        _setEsu(1_000 ether);
 
         vm.expectRevert(
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user, token.MINTER_ROLE())
@@ -126,7 +191,7 @@ contract GEMxTokenTest is Test {
     }
 
     function testOnlyMinterCanBurn() public {
-        _setProofOfReserve(1_000 ether);
+        _setEsu(1_000 ether);
 
         vm.prank(minter);
         token.mint(user, uint256(10 ether));
@@ -181,7 +246,7 @@ contract GEMxTokenTest is Test {
     }
 
     function testTransferWhenPauseUnpause() public {
-        _setProofOfReserve(1_000 ether);
+        _setEsu(1_000 ether);
 
         vm.prank(minter);
         token.mint(user, uint256(10 ether));
@@ -215,7 +280,7 @@ contract GEMxTokenTest is Test {
 
     // TODO: split into separate tests once modifier with test setup is implemented
     function testOnlyCustodianCanFreezeAndUnfreeze() public {
-        _setProofOfReserve(1_000 ether);
+        _setEsu(1_000 ether);
 
         vm.prank(minter);
         token.mint(user, uint256(10 ether));
@@ -228,8 +293,8 @@ contract GEMxTokenTest is Test {
         assertEq(token.availableBalance(user), 10 ether);
 
         // freeze allowed
-        //vm.expectEmit();
-        //emit ERC20CustodianUpgradeable.TokensFrozen(user, 1 ether);
+        vm.expectEmit();
+        emit TokensFrozen(user, 1 ether);
         vm.prank(custodian);
         token.freeze(user, 1 ether);
         assertEq(token.frozen(user), 1 ether);
@@ -243,8 +308,8 @@ contract GEMxTokenTest is Test {
         assertEq(token.availableBalance(user), 9 ether);
 
         // unfreeze allowed
-        //vm.expectEmit();
-        //emit ERC20CustodianUpgradeable.TokensFrozen(user, 0);
+        vm.expectEmit();
+        emit TokensFrozen(user, 0);
         vm.prank(custodian);
         token.freeze(user, 0 ether);
         assertEq(token.frozen(user), 0);
@@ -252,7 +317,7 @@ contract GEMxTokenTest is Test {
     }
 
     function testTransferWhenAmountFrozen() public {
-        _setProofOfReserve(1_000 ether);
+        _setEsu(1_000 ether);
 
         vm.prank(minter);
         token.mint(user, uint256(10 ether));
@@ -276,6 +341,22 @@ contract GEMxTokenTest is Test {
 
         assertEq(token.availableBalance(user), 0 ether);
         assertEq(token.availableBalance(anon), 2 ether);
+    }
+
+    function testCannotFreezeMoreThanAvailable() public {
+        _setEsu(1_000 ether);
+
+        vm.prank(minter);
+        token.mint(user, uint256(10 ether));
+
+        // try to freeze more than user has balance
+        vm.expectRevert(
+            abi.encodeWithSelector(ERC20CustodianUpgradeable.ERC20InsufficientUnfrozenBalance.selector, user)
+        );
+        vm.prank(custodian);
+        token.freeze(user, 11 ether);
+
+        assertEq(token.frozen(user), 0 ether);
     }
 
     /*##################################################################################*/
@@ -314,7 +395,7 @@ contract GEMxTokenTest is Test {
     }
 
     function testTransferWhenUserBlocked() public {
-        _setProofOfReserve(1_000 ether);
+        _setEsu(1_000 ether);
 
         vm.prank(minter);
         token.mint(user, uint256(10 ether));
@@ -359,7 +440,7 @@ contract GEMxTokenTest is Test {
     }
 
     function testErc20ApproveWhenUserBlocked() public {
-        _setProofOfReserve(1_000 ether);
+        _setEsu(1_000 ether);
 
         vm.prank(minter);
         token.mint(user, uint256(10 ether));
@@ -410,7 +491,7 @@ contract GEMxTokenTest is Test {
         token.grantRole(role, newMinter);
         assertTrue(token.hasRole(role, newMinter));
 
-        role = token.ESU_ROLE();
+        role = token.ESU_PER_TOKEN_MODIFIER_ROLE();
         vm.prank(admin);
         token.grantRole(role, newMinter);
         assertTrue(token.hasRole(role, newMinter));
@@ -441,10 +522,10 @@ contract GEMxTokenTest is Test {
         token.revokeRole(limiterRole, limiter);
         assertFalse(token.hasRole(limiterRole, limiter));
 
-        bytes32 esuUpdateRole = token.ESU_ROLE();
-        assertTrue(token.hasRole(esuUpdateRole, esuUpdater));
+        bytes32 esuPerTokenModifierRole = token.ESU_PER_TOKEN_MODIFIER_ROLE();
+        assertTrue(token.hasRole(esuPerTokenModifierRole, esuPerTokenModifier));
         vm.prank(admin);
-        token.revokeRole(esuUpdateRole, esuUpdater);
-        assertFalse(token.hasRole(esuUpdateRole, esuUpdater));
+        token.revokeRole(esuPerTokenModifierRole, esuPerTokenModifier);
+        assertFalse(token.hasRole(esuPerTokenModifierRole, esuPerTokenModifier));
     }
 }
