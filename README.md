@@ -2,7 +2,7 @@
 
 | Property                  | Value                                       |
 | ------------------------- | ------------------------------------------- |
-| Name                      | EmGemX Switzerland                          |
+| Name                      | EmGEMx Switzerland                          |
 | Symbol                    | EmCH                                        |
 | Issuer                    | GemX AG, Zug, CH                            |
 | Number of Tokens          | Variable                                    |

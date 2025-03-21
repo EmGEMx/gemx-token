@@ -1,29 +1,30 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.20;
 
 import {MockV3Aggregator} from "../test/mocks/MockV3Aggregator.sol";
-import {Script} from "forge-std/Script.sol";
+import {Script, console} from "forge-std/Script.sol";
 
 contract HelperConfig is Script {
     NetworkConfig public activeNetworkConfig;
 
-    uint8 public constant DECIMALS = 18;
-    int256 public constant PROOF_OF_RESERVE_MOCK = 100_000;
-
-    uint256 public DEFAULT_ANVIL_PRIVATE_KEY = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
+    uint256 public constant PROOF_OF_RESERVE_MOCK = 10000 * 100000000; //10.000 in token decimals
 
     struct NetworkConfig {
-        address proofOfReserveOracle;
+        address esuOracle;
     }
 
     constructor() {
         if (block.chainid == 11155111) {
+            // Ethereum Sepolia
             activeNetworkConfig = getSepoliaEthConfig();
         } else if (block.chainid == 43113) {
+            // Avalanche Fuji Testnet
             activeNetworkConfig = getFujiEthConfig();
         } else if (block.chainid == 43114) {
+            // Avalanche C-Chain Mainnet
             activeNetworkConfig = getAvalancheEthConfig();
         } else if (block.chainid == 1) {
+            // Ethereum Mainnet
             activeNetworkConfig = getMainnetEthConfig();
         } else {
             activeNetworkConfig = getOrCreateAnvilEthConfig();
@@ -31,31 +32,33 @@ contract HelperConfig is Script {
     }
 
     function getSepoliaEthConfig() public pure returns (NetworkConfig memory sepoliaNetworkConfig) {
-        sepoliaNetworkConfig = NetworkConfig({proofOfReserveOracle: address(0x0)});
+        // no oracle on other chains than Avalanche
+        sepoliaNetworkConfig = NetworkConfig({esuOracle: 0x8D26D407ebed4D03dE7c18f5Db913155a4D587AE});
     }
 
     function getFujiEthConfig() public pure returns (NetworkConfig memory fujiNetworkConfig) {
-        fujiNetworkConfig = NetworkConfig({proofOfReserveOracle: address(0x0)});
+        fujiNetworkConfig = NetworkConfig({esuOracle: 0x8F1C8888fBcd9Cc5D732df1e146d399a21899c22});
     }
 
     function getAvalancheEthConfig() public pure returns (NetworkConfig memory avalancheNetworkConfig) {
-        avalancheNetworkConfig = NetworkConfig({proofOfReserveOracle: address(0x0)});
+        revert("Feed address missing");
+        avalancheNetworkConfig = NetworkConfig({esuOracle: address(0x0)});
     }
 
     function getMainnetEthConfig() public pure returns (NetworkConfig memory mainnetNetworkConfig) {
-        mainnetNetworkConfig = NetworkConfig({proofOfReserveOracle: address(0x0)});
+        // no oracle on other chains than Avalanche
+        mainnetNetworkConfig = NetworkConfig({esuOracle: address(0x0)});
     }
 
-    function getOrCreateAnvilEthConfig() public returns (NetworkConfig memory anvilNetworkConfig) {
+    function getOrCreateAnvilEthConfig() public view returns (NetworkConfig memory anvilNetworkConfig) {
         // Check to see if we set an active network config
-        if (activeNetworkConfig.proofOfReserveOracle != address(0)) {
+        if (activeNetworkConfig.esuOracle != address(0)) {
             return activeNetworkConfig;
         }
 
-        vm.startBroadcast();
-        MockV3Aggregator proofOfReserveFeed = new MockV3Aggregator(PROOF_OF_RESERVE_MOCK);
-        vm.stopBroadcast();
-
-        anvilNetworkConfig = NetworkConfig({proofOfReserveOracle: address(proofOfReserveFeed)});
+        //MockV3Aggregator mock = new MockV3Aggregator(PROOF_OF_RESERVE_MOCK);
+        //console.log("Anvil oracle mock:", address(mock));
+        //anvilNetworkConfig = NetworkConfig({esuOracle: address(mock)});
+        anvilNetworkConfig = NetworkConfig({esuOracle: address(0x0)});
     }
 }
