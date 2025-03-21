@@ -132,6 +132,7 @@ contract GEMxTokenTest is Test {
         token.setEsuPerToken(9, 10000);
 
         (esu, esuPrecision) = token.getEsuPerToken();
+
         assertEq(esu, 9);
         assertEq(esuPrecision, 10000);
     }
