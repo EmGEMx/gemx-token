@@ -31,7 +31,7 @@ format          :; forge fmt
 anvil           :; anvil -m 'test test test test test test test test test test test junk' --steps-tracing #--block-time 1
 fork	        :; anvil --fork-url ${FORK_ETH_RPC_URL} --fork-block-number ${FORK_BLOCK_NUMBER}
 watch		  	:; forge test --watch src/
-slither         :; slither src/GEMxToken.sol --triage-mode
+slither         :; slither src/EmGEMxToken.sol --triage-mode
 
 NETWORK_ARGS := --rpc-url http://localhost:8545 --private-key $(DEFAULT_ANVIL_KEY) --broadcast
 
