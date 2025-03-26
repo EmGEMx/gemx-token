@@ -16,8 +16,10 @@ import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/
  * The frozen balance is not available for transfers or approvals
  * to other entities to operate on its behalf if. The frozen balance
  * can be reduced by calling {freeze} again with a lower amount.
+ *
+ * Taken from https://docs.openzeppelin.com/community-contracts/0.0.1/api/token#ERC20Custodian
  */
-abstract contract ERC20CustodianUpgradeable is ERC20Upgradeable {
+abstract contract ERC20FreezableUpgradeable is ERC20Upgradeable {
     /**
      * @dev The amount of tokens frozen by user address.
      */
@@ -48,15 +50,15 @@ abstract contract ERC20CustodianUpgradeable is ERC20Upgradeable {
     error ERC20InsufficientFrozenBalance(address user);
 
     /**
-     * @dev Error thrown when a non-custodian account attempts to perform a custodian-only operation.
+     * @dev Error thrown when a non-freezer account attempts to perform the freezer operation.
      */
-    error ERC20NotCustodian();
+    error ERC20NotFreezer();
 
     /**
-     * @dev Modifier to restrict access to custodian accounts only.
+     * @dev Modifier to restrict access to freezer accounts only.
      */
-    modifier onlyCustodian() {
-        if (!_isCustodian(_msgSender())) revert ERC20NotCustodian();
+    modifier onlyFreezer() {
+        if (!_isFreezer(_msgSender())) revert ERC20NotFreezer();
         _;
     }
 
@@ -76,7 +78,7 @@ abstract contract ERC20CustodianUpgradeable is ERC20Upgradeable {
      *
      * - The user must have sufficient unfrozen balance.
      */
-    function freeze(address user, uint256 amount) external virtual onlyCustodian {
+    function freeze(address user, uint256 amount) external virtual onlyFreezer {
         if (availableBalance(user) < amount) revert ERC20InsufficientUnfrozenBalance(user);
         _frozen[user] = amount;
         emit TokensFrozen(user, amount);
@@ -92,11 +94,11 @@ abstract contract ERC20CustodianUpgradeable is ERC20Upgradeable {
     }
 
     /**
-     * @dev Checks if the user is a custodian.
+     * @dev Checks if the user is a freezer.
      * @param user The address of the user to check.
      * @return True if the user is authorized, false otherwise.
      */
-    function _isCustodian(address user) internal view virtual returns (bool);
+    function _isFreezer(address user) internal view virtual returns (bool);
 
     function _update(address from, address to, uint256 value) internal virtual override {
         if (from != address(0) && availableBalance(from) < value) revert ERC20InsufficientUnfrozenBalance(from);

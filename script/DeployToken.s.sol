@@ -4,9 +4,14 @@ pragma solidity 0.8.20;
 //import {Script, console} from "forge-std/Script.sol"; // not recognized by VS Code
 import {Script, console} from "lib/forge-std/src/Script.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
+import {DeployOracleMock} from "./DeployOracleMock.s.sol";
 import {EmGEMxToken} from "../src/EmGEMxToken.sol";
 import {MockV3Aggregator} from "../test/mocks/MockV3Aggregator.sol";
 
+/**
+ * @title Deployment script for the EmGEMx token contract
+ * @dev Upgradable ERC 20 contract that contains a chain switch due to the fact that certain functionality (e.g. token max supply) should be limited to the parent chain (Avalanche C-Chain).
+ */
 contract DeployToken is Script {
     EmGEMxToken public token;
 
@@ -15,10 +20,12 @@ contract DeployToken is Script {
 
         vm.startBroadcast();
 
-        (address esuOracle) = helperConfig.activeNetworkConfig();
-        if (esuOracle == address(0x0)) {
+        (address esuOracle, bool deployOracleMock) = helperConfig.activeNetworkConfig();
+        if (esuOracle == address(0x0) && deployOracleMock) {
             uint256 mockValue = helperConfig.PROOF_OF_RESERVE_MOCK();
-            MockV3Aggregator mock = createProofOrReserveMock(mockValue);
+
+            DeployOracleMock deployMock = new DeployOracleMock();
+            MockV3Aggregator mock = deployMock.deploy(mockValue);
             esuOracle = address(mock);
         }
         console.log("Oracle address:", esuOracle);
@@ -34,11 +41,5 @@ contract DeployToken is Script {
         vm.stopBroadcast();
 
         return token;
-    }
-
-    function createProofOrReserveMock(uint256 reserve) private returns (MockV3Aggregator) {
-        MockV3Aggregator mock = new MockV3Aggregator(int256(reserve));
-        console.log("Oracle mock deployed at:", address(mock));
-        return mock;
     }
 }

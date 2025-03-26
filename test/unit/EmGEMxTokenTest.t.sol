@@ -5,7 +5,7 @@ import {Test, console} from "lib/forge-std/src/Test.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {PausableUpgradeable} from
     "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
-import {ERC20CustodianUpgradeable} from "../../src/ERC20CustodianUpgradeable.sol";
+import {ERC20FreezableUpgradeable} from "../../src/ERC20FreezableUpgradeable.sol";
 import {ERC20BlocklistUpgradeable} from "../../src/ERC20BlocklistUpgradeable.sol";
 import {EmGEMxToken} from "../../src/EmGEMxToken.sol";
 import {DeployToken} from "../../script/DeployToken.s.sol";
@@ -18,13 +18,19 @@ contract EmGEMxTokenTest is Test {
     address admin = address(0x1);
     address minter = address(0x2);
     address pauser = address(0x3);
-    address custodian = address(0x4);
+    address freezer = address(0x4);
     address limiter = address(0x5);
     address esuPerTokenModifier = address(0x6);
+    address redeemer = address(0x7);
+
+    address redeemAddress = makeAddr("redeemAddress");
     address user = makeAddr("user");
     address anon = makeAddr("anon");
 
     event TokensFrozen(address indexed user, uint256 amount);
+    event OracleAddressChanged(string oldAddres, string newAddress);
+    event EsuPerTokenChanged(uint256 value, uint256 precision);
+    event RedeemAddressChanged(address oldAddress, address newAddress);
 
     function setUp() public {
         admin = makeAddr("Admin");
@@ -42,13 +48,12 @@ contract EmGEMxTokenTest is Test {
         token.grantRole(token.DEFAULT_ADMIN_ROLE(), admin);
         token.grantRole(token.MINTER_ROLE(), minter);
         token.grantRole(token.PAUSER_ROLE(), pauser);
-        token.grantRole(token.CUSTODIAN_ROLE(), custodian);
+        token.grantRole(token.FREEZER_ROLE(), freezer);
         token.grantRole(token.LIMITER_ROLE(), limiter);
         token.grantRole(token.ESU_PER_TOKEN_MODIFIER_ROLE(), esuPerTokenModifier);
+        token.grantRole(token.REDEEMER_ROLE(), redeemer);
         vm.stopPrank();
     }
-
-    // TODO: set up invariant testing. Inveriant of the system: it should never be possible to mint more than allowed by ESU and PoR!
 
     function testTokenProperties() public view {
         assertEq(token.name(), "EmGEMx Switzerland");
@@ -81,6 +86,14 @@ contract EmGEMxTokenTest is Test {
         assertEq(token.getOracleAddress(), address(newOracle));
     }
 
+    function testSetOracleAddress_CannotBeCalledOnNonParentChain() public {
+        vm.chainId(1); // non parent chain
+
+        vm.prank(admin);
+        vm.expectRevert(EmGEMxToken.EmGEMxToken__ParentChainOnly.selector);
+        token.setOracleAddress(makeAddr("newOracleAddress"));
+    }
+
     /*##################################################################################*/
     /*###################################### ESU #######################################*/
     /*##################################################################################*/
@@ -103,7 +116,7 @@ contract EmGEMxTokenTest is Test {
         assertEq(token.totalSupply(), 10_000 ether);
 
         // ACT
-        vm.expectRevert(EmGEMxToken.NotEnoughReserve.selector);
+        vm.expectRevert(EmGEMxToken.EmGEMxToken__NotEnoughReserve.selector);
         token.mint(user, 1);
         vm.stopPrank();
 
@@ -144,18 +157,35 @@ contract EmGEMxTokenTest is Test {
         vm.prank(user);
         token.setEsuPerToken(9, 10000);
 
-        // values should not have changed
         (esu, esuPrecision) = token.getEsuPerToken();
         assertEq(esu, 1, "Esu value should not have changed");
         assertEq(esuPrecision, 100, "Esu precision should not have changed");
 
         // ACT
         vm.prank(esuPerTokenModifier);
+        vm.expectEmit();
+        emit EsuPerTokenChanged(9, 10000);
         token.setEsuPerToken(9, 10000);
 
         (esu, esuPrecision) = token.getEsuPerToken();
         assertEq(esu, 9);
         assertEq(esuPrecision, 10000);
+    }
+
+    function testEsuPerToken_CannotBeUpdatedOnNonParentChain() public {
+        (uint256 esu, uint256 esuPrecision) = token.getEsuPerToken();
+        assertEq(esu, 1);
+        assertEq(esuPrecision, 100);
+
+        vm.chainId(1); // non parent chain
+
+        vm.prank(esuPerTokenModifier);
+        vm.expectRevert(EmGEMxToken.EmGEMxToken__ParentChainOnly.selector);
+        token.setEsuPerToken(9, 10000);
+
+        (esu, esuPrecision) = token.getEsuPerToken();
+        assertEq(esu, 1, "Esu value should not have changed");
+        assertEq(esuPrecision, 100, "Esu precision should not have changed");
     }
 
     function testVerifyEsuCalculation() public {
@@ -212,8 +242,9 @@ contract EmGEMxTokenTest is Test {
         assertEq(token.balanceOf(user), 1 ether);
     }
 
-    function testOnlyMinterCanBurn() public {
+    function testOnlyMinterCanBurnOnChildChain() public {
         _setEsu(1_000 ether);
+        vm.chainId(1); // burn restriction only in place on parent chain
 
         vm.prank(minter);
         token.mint(user, uint256(10 ether));
@@ -230,6 +261,104 @@ contract EmGEMxTokenTest is Test {
         token.burn(user, 1 ether);
 
         assertEq(token.balanceOf(user), 9 ether);
+    }
+
+    /*##################################################################################*/
+    /*#################################### Redeem ######################################*/
+    /*##################################################################################*/
+
+    function testOnlyAdminCanSetRedeemAddress() public {
+        assertEq(token.getRedeemAddress(), address(0));
+        address newRedeemAddress = makeAddr("newRedeemAddress");
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, user, token.DEFAULT_ADMIN_ROLE()
+            )
+        );
+        vm.prank(user);
+        token.setRedeemAddress(newRedeemAddress);
+        assertEq(token.getRedeemAddress(), address(0));
+
+        vm.prank(admin);
+        vm.expectEmit();
+        emit RedeemAddressChanged(address(0), newRedeemAddress);
+        token.setRedeemAddress(newRedeemAddress);
+        assertEq(token.getRedeemAddress(), newRedeemAddress);
+    }
+
+    function testBurnOnParentChainOnlyAllowedForRedeemAddress() public {
+        _setEsu(1_000 ether);
+        vm.chainId(token.PARENT_CHAIN_ID()); // burn restriction only in place on parent chain
+
+        vm.prank(minter);
+        token.mint(user, uint256(10 ether));
+
+        vm.expectRevert(EmGEMxToken.EmGEMxToken__BurnOnParentChainNotAllowed.selector);
+        vm.prank(minter);
+        token.burn(user, 1 ether);
+
+        assertEq(token.balanceOf(user), 10 ether, "balance should not change");
+    }
+
+    function testRedeem_WhenRedeemAddressNotSet_Reverts() public {
+        _setEsu(1_000 ether);
+        assertEq(token.getRedeemAddress(), address(0));
+
+        vm.expectRevert(EmGEMxToken.EmGEMxToken__RedeemAddressNotSet.selector);
+        vm.prank(redeemer);
+        token.redeem(1 ether);
+    }
+
+    function testOnlyRedeemerCanRedeem() public {
+        _setEsu(1_000 ether);
+        vm.prank(admin);
+        token.setRedeemAddress(redeemAddress);
+        vm.prank(minter);
+        token.mint(redeemAddress, 10 ether);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, user, token.REDEEMER_ROLE()
+            )
+        );
+        vm.prank(user);
+        token.redeem(1 ether);
+        assertEq(token.balanceOf(redeemAddress), 10 ether, "balance should not change");
+
+        vm.prank(redeemer);
+        token.redeem(1 ether);
+        assertEq(token.balanceOf(redeemAddress), 9 ether);
+    }
+
+    function testZeroAddressAsRedeemAddressReverts() public {
+        assertEq(token.getRedeemAddress(), address(0));
+        address newRedeemAddress = makeAddr("newRedeemAddress");
+
+        vm.prank(admin);
+        token.setRedeemAddress(newRedeemAddress);
+        assertEq(token.getRedeemAddress(), newRedeemAddress);
+
+        vm.expectRevert(abi.encodeWithSelector(EmGEMxToken.EmGEMxToken__InvalidAddress.selector, address(0)));
+        vm.prank(admin);
+        token.setRedeemAddress(address(0));
+        assertEq(token.getRedeemAddress(), newRedeemAddress, "Addres should not change");
+    }
+
+    function testRedeem_CannotBeCalledOnNonParentChain() public {
+        vm.chainId(1); // non parent chain
+
+        vm.prank(redeemer);
+        vm.expectRevert(EmGEMxToken.EmGEMxToken__ParentChainOnly.selector);
+        token.redeem(1);
+    }
+
+    function testSetRedeemAddress_CannotBeCalledOnNonParentChain() public {
+        vm.chainId(1); // non parent chain
+
+        vm.prank(admin);
+        vm.expectRevert(EmGEMxToken.EmGEMxToken__ParentChainOnly.selector);
+        token.setRedeemAddress(makeAddr("newRedeemAddress"));
     }
 
     /*##################################################################################*/
@@ -301,14 +430,14 @@ contract EmGEMxTokenTest is Test {
     /*##################################################################################*/
 
     // TODO: split into separate tests once modifier with test setup is implemented
-    function testOnlyCustodianCanFreezeAndUnfreeze() public {
+    function testOnlyfreezerCanFreezeAndUnfreeze() public {
         _setEsu(1_000 ether);
 
         vm.prank(minter);
         token.mint(user, uint256(10 ether));
 
         // freeze not allowed
-        vm.expectRevert(ERC20CustodianUpgradeable.ERC20NotCustodian.selector);
+        vm.expectRevert(ERC20FreezableUpgradeable.ERC20NotFreezer.selector);
         vm.prank(anon);
         token.freeze(user, 1 ether);
         assertEq(token.frozen(user), 0);
@@ -317,13 +446,13 @@ contract EmGEMxTokenTest is Test {
         // freeze allowed
         vm.expectEmit();
         emit TokensFrozen(user, 1 ether);
-        vm.prank(custodian);
+        vm.prank(freezer);
         token.freeze(user, 1 ether);
         assertEq(token.frozen(user), 1 ether);
         assertEq(token.availableBalance(user), 9 ether);
 
         // unfreeze not allowed
-        vm.expectRevert(ERC20CustodianUpgradeable.ERC20NotCustodian.selector);
+        vm.expectRevert(ERC20FreezableUpgradeable.ERC20NotFreezer.selector);
         vm.prank(anon);
         token.freeze(user, 0 ether);
         assertEq(token.frozen(user), 1 ether);
@@ -332,7 +461,7 @@ contract EmGEMxTokenTest is Test {
         // unfreeze allowed
         vm.expectEmit();
         emit TokensFrozen(user, 0);
-        vm.prank(custodian);
+        vm.prank(freezer);
         token.freeze(user, 0 ether);
         assertEq(token.frozen(user), 0);
         assertEq(token.availableBalance(user), 10 ether);
@@ -345,14 +474,14 @@ contract EmGEMxTokenTest is Test {
         token.mint(user, uint256(10 ether));
 
         // freeze allowed
-        vm.prank(custodian);
+        vm.prank(freezer);
         token.freeze(user, 8 ether);
         assertEq(token.frozen(user), 8 ether);
         assertEq(token.availableBalance(user), 2 ether);
 
         // try to transfer with amount exceeding frozen balance
         vm.expectRevert(
-            abi.encodeWithSelector(ERC20CustodianUpgradeable.ERC20InsufficientUnfrozenBalance.selector, user)
+            abi.encodeWithSelector(ERC20FreezableUpgradeable.ERC20InsufficientUnfrozenBalance.selector, user)
         );
         vm.prank(user);
         token.transfer(anon, 3 ether);
@@ -373,9 +502,9 @@ contract EmGEMxTokenTest is Test {
 
         // try to freeze more than user has balance
         vm.expectRevert(
-            abi.encodeWithSelector(ERC20CustodianUpgradeable.ERC20InsufficientUnfrozenBalance.selector, user)
+            abi.encodeWithSelector(ERC20FreezableUpgradeable.ERC20InsufficientUnfrozenBalance.selector, user)
         );
-        vm.prank(custodian);
+        vm.prank(freezer);
         token.freeze(user, 11 ether);
 
         assertEq(token.frozen(user), 0 ether);
@@ -503,7 +632,7 @@ contract EmGEMxTokenTest is Test {
         token.grantRole(role, newMinter);
         assertTrue(token.hasRole(role, newMinter));
 
-        role = token.CUSTODIAN_ROLE();
+        role = token.FREEZER_ROLE();
         vm.prank(admin);
         token.grantRole(role, newMinter);
         assertTrue(token.hasRole(role, newMinter));
@@ -514,6 +643,11 @@ contract EmGEMxTokenTest is Test {
         assertTrue(token.hasRole(role, newMinter));
 
         role = token.ESU_PER_TOKEN_MODIFIER_ROLE();
+        vm.prank(admin);
+        token.grantRole(role, newMinter);
+        assertTrue(token.hasRole(role, newMinter));
+
+        role = token.REDEEMER_ROLE();
         vm.prank(admin);
         token.grantRole(role, newMinter);
         assertTrue(token.hasRole(role, newMinter));
@@ -532,11 +666,11 @@ contract EmGEMxTokenTest is Test {
         token.revokeRole(pauserRole, pauser);
         assertFalse(token.hasRole(pauserRole, pauser));
 
-        bytes32 custodianRole = token.CUSTODIAN_ROLE();
-        assertTrue(token.hasRole(custodianRole, custodian));
+        bytes32 freezerRole = token.FREEZER_ROLE();
+        assertTrue(token.hasRole(freezerRole, freezer));
         vm.prank(admin);
-        token.revokeRole(custodianRole, custodian);
-        assertFalse(token.hasRole(custodianRole, custodian));
+        token.revokeRole(freezerRole, freezer);
+        assertFalse(token.hasRole(freezerRole, freezer));
 
         bytes32 limiterRole = token.LIMITER_ROLE();
         assertTrue(token.hasRole(limiterRole, limiter));
@@ -549,5 +683,11 @@ contract EmGEMxTokenTest is Test {
         vm.prank(admin);
         token.revokeRole(esuPerTokenModifierRole, esuPerTokenModifier);
         assertFalse(token.hasRole(esuPerTokenModifierRole, esuPerTokenModifier));
+
+        bytes32 redeemerRole = token.REDEEMER_ROLE();
+        assertTrue(token.hasRole(redeemerRole, redeemer));
+        vm.prank(admin);
+        token.revokeRole(redeemerRole, redeemer);
+        assertFalse(token.hasRole(redeemerRole, redeemer));
     }
 }
