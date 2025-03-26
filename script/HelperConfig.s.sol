@@ -11,6 +11,7 @@ contract HelperConfig is Script {
 
     struct NetworkConfig {
         address esuOracle;
+        bool deployOracleMock;
     }
 
     constructor() {
@@ -33,21 +34,23 @@ contract HelperConfig is Script {
 
     function getSepoliaEthConfig() public pure returns (NetworkConfig memory sepoliaNetworkConfig) {
         // no oracle on other chains than Avalanche
-        sepoliaNetworkConfig = NetworkConfig({esuOracle: 0x8D26D407ebed4D03dE7c18f5Db913155a4D587AE});
+        sepoliaNetworkConfig =
+            NetworkConfig({esuOracle: 0x8D26D407ebed4D03dE7c18f5Db913155a4D587AE, deployOracleMock: false});
     }
 
     function getFujiEthConfig() public pure returns (NetworkConfig memory fujiNetworkConfig) {
-        fujiNetworkConfig = NetworkConfig({esuOracle: 0x8F1C8888fBcd9Cc5D732df1e146d399a21899c22});
+        fujiNetworkConfig =
+            NetworkConfig({esuOracle: 0x8F1C8888fBcd9Cc5D732df1e146d399a21899c22, deployOracleMock: false});
     }
 
     function getAvalancheEthConfig() public pure returns (NetworkConfig memory avalancheNetworkConfig) {
-        revert("Feed address missing");
-        avalancheNetworkConfig = NetworkConfig({esuOracle: address(0x0)});
+        revert("Oracle feed address missing");
+        avalancheNetworkConfig = NetworkConfig({esuOracle: address(0x0), deployOracleMock: false});
     }
 
     function getMainnetEthConfig() public pure returns (NetworkConfig memory mainnetNetworkConfig) {
         // no oracle on other chains than Avalanche
-        mainnetNetworkConfig = NetworkConfig({esuOracle: address(0x0)});
+        mainnetNetworkConfig = NetworkConfig({esuOracle: address(0x0), deployOracleMock: false});
     }
 
     function getOrCreateAnvilEthConfig() public view returns (NetworkConfig memory anvilNetworkConfig) {
@@ -59,6 +62,6 @@ contract HelperConfig is Script {
         //MockV3Aggregator mock = new MockV3Aggregator(PROOF_OF_RESERVE_MOCK);
         //console.log("Anvil oracle mock:", address(mock));
         //anvilNetworkConfig = NetworkConfig({esuOracle: address(mock)});
-        anvilNetworkConfig = NetworkConfig({esuOracle: address(0x0)});
+        anvilNetworkConfig = NetworkConfig({esuOracle: address(0x0), deployOracleMock: true});
     }
 }
