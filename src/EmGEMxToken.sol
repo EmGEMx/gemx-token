@@ -103,6 +103,7 @@ contract EmGEMxToken is
         __ERC20Pausable_init();
         __AccessControl_init();
         __Ownable_init(_msgSender());
+        __ERC20Permit_init(name);
         _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setRoleAdmin(MINTER_ROLE, DEFAULT_ADMIN_ROLE);
         _setRoleAdmin(ESU_PER_TOKEN_MODIFIER_ROLE, DEFAULT_ADMIN_ROLE);
