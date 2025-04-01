@@ -130,8 +130,13 @@ contract EmGEMxToken is
     }
 
     /// @notice Wrapps ERC20BurnableUpgradeable._burn
-    function burn(address account, uint256 value) external onlyRole(MINTER_ROLE) {
-        _burn(account, value);
+    function burn(uint256 value) public override onlyRole(MINTER_ROLE) {
+        super.burn(value);
+    }
+
+    /// @notice Wrapps ERC20BurnableUpgradeable._burnFrom
+    function burnFrom(address account, uint256 value) public override onlyRole(MINTER_ROLE) {
+        super.burnFrom(account, value);
     }
 
     /// @notice Burns token from the redeemAddress.
