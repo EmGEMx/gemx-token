@@ -263,15 +263,19 @@ contract EmGEMxToken is
     /// @return The quried ESU value from the chainlink PoR oracle.
     function _getEsuFromOracle() private view returns (uint256) {
         (
-            /* uint80 roundID */
+            uint80 roundID
             ,
             int256 answer,
             /*uint startedAt*/
             ,
-            /*uint timeStamp*/
+            uint updatedAt
             ,
-            /*uint80 answeredInRound*/
+            uint80 answeredInRound
         ) = oracle.latestRoundData();
+
+        require(answer > 0, "PoR: answer is zero");
+        require(updatedAt > 0, "PoR: updatedAt is zero");
+        require(answeredInRound >= roundID, "PoR: data is stale");
 
         return uint256(answer);
     }
