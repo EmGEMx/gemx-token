@@ -40,7 +40,7 @@ abstract contract ERC20BlocklistUpgradeable is ERC20Upgradeable {
     /**
      * @dev Returns the blocked status of an account.
      */
-    function blocked(address account) public virtual returns (bool) {
+    function blocked(address account) public view virtual returns (bool) {
         return _blocked[account];
     }
 
