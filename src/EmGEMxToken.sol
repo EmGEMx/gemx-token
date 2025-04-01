@@ -70,9 +70,8 @@ contract EmGEMxToken is
     - max_tokens = esu / esu_per_token
     */
 
-    // initial esuPerToken: 0.01
-    uint256 private esuPerTokenValue = 1;
-    uint256 private esuPerTokenPrecision = 100;
+    uint256 private esuPerTokenValue;
+    uint256 private esuPerTokenPrecision;
 
     ///////////////////
     // Events
@@ -113,6 +112,10 @@ contract EmGEMxToken is
         _setRoleAdmin(REDEEMER_ROLE, DEFAULT_ADMIN_ROLE);
 
         oracle = AggregatorV3Interface(oracleAddres);
+
+        // initial esuPerToken: 0.01
+        esuPerTokenValue = 1;
+        esuPerTokenPrecision = 100;
     }
 
     ///////////////////
