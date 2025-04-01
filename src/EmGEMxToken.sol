@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity 0.8.20;
+pragma solidity 0.8.22;
 
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -92,12 +92,17 @@ contract EmGEMxToken is
         _;
     }
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     ///////////////////
     // Functions
     ///////////////////
 
-    function initialize(address oracleAddres, string memory name, string memory symbol) public initializer {
-        validateNotZeroAddress(oracleAddres);
+    function initialize(address oracleAddress, string memory name, string memory symbol) public initializer {
+        validateNotZeroAddress(oracleAddress);
         
         __ERC20_init(name, symbol);
         __ERC20Burnable_init();
@@ -113,7 +118,7 @@ contract EmGEMxToken is
         _setRoleAdmin(LIMITER_ROLE, DEFAULT_ADMIN_ROLE);
         _setRoleAdmin(REDEEMER_ROLE, DEFAULT_ADMIN_ROLE);
 
-        oracle = AggregatorV3Interface(oracleAddres);
+        oracle = AggregatorV3Interface(oracleAddress);
 
         // initial esuPerToken: 0.01
         esuPerTokenValue = 1;

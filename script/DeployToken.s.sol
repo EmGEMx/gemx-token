@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.20;
+pragma solidity 0.8.22;
 
 //import {Script, console} from "forge-std/Script.sol"; // not recognized by VS Code
 import {Script, console} from "lib/forge-std/src/Script.sol";
@@ -7,6 +7,7 @@ import {HelperConfig} from "./HelperConfig.s.sol";
 import {DeployOracleMock} from "./DeployOracleMock.s.sol";
 import {EmGEMxToken} from "../src/EmGEMxToken.sol";
 import {MockV3Aggregator} from "../test/mocks/MockV3Aggregator.sol";
+import {Upgrades} from "@openzeppelin-foundry-upgrades/Upgrades.sol";
 
 /**
  * @title Deployment script for the EmGEMx token contract
@@ -30,13 +31,16 @@ contract DeployToken is Script {
         }
         console.log("Oracle address:", esuOracle);
 
-        token = new EmGEMxToken();
-        console.log("Token address:", address(token));
-
         string memory tokenName = vm.envString("TOKEN_NAME"); // "EmGEMx Switzerland"
         string memory tokenSymbol = vm.envString("TOKEN_SYMBOL"); // "EmCH"
 
-        token.initialize(esuOracle, tokenName, tokenSymbol);
+        address proxyAddress = Upgrades.deployTransparentProxy(
+            "EmGEMxToken.sol", msg.sender, abi.encodeCall(EmGEMxToken.initialize, (esuOracle, tokenName, tokenSymbol))
+        );
+        token = EmGEMxToken(proxyAddress);
+        console.log("Token address:", address(token));
+        address implementationAddress = Upgrades.getImplementationAddress(proxyAddress);
+        console.log("Implementation address:", implementationAddress);
 
         vm.stopBroadcast();
 
