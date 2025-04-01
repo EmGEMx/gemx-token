@@ -97,6 +97,8 @@ contract EmGEMxToken is
     ///////////////////
 
     function initialize(address oracleAddres, string memory name, string memory symbol) public initializer {
+        validateNotZeroAddress(oracleAddres);
+        
         __ERC20_init(name, symbol);
         __ERC20Burnable_init();
         __ERC20Pausable_init();
