@@ -20,10 +20,13 @@ install	        :; forge install foundry-rs/forge-std --no-commit && \
                    forge install smartcontractkit/chainlink-brownie-contracts --no-commit && \
                    forge install OpenZeppelin/openzeppelin-community-contracts --no-commit
 .PHONY: test
-test          	:; forge test
-test-vvv        :; forge test -vvv
-test-gasreport 	:; forge test --gas-report
-test-fork       :; forge test --fork-url ${ETH_RPC_URL} -vvv
+test          	:	clean
+					forge test
+test-vvv        :	clean
+					forge test -vvv
+test-gasreport 	:	clean
+					forge test --gas-report
+test-fork       :;	forge test --fork-url ${ETH_RPC_URL} -vvv
 .PHONY: coverage
 coverage        :; mkdir -p ./coverage && forge coverage --no-match-coverage "script|test" --report lcov --report-file coverage/lcov.info && genhtml coverage/lcov.info -o coverage --branch-coverage
 snapshot        :; forge snapshot

@@ -18,6 +18,7 @@ contract MockV3Aggregator is AggregatorV3Interface {
     int256 public latestAnswer;
     uint256 public latestTimestamp;
     uint256 public latestRound;
+    bool public isStale;
 
     mapping(uint256 => int256) public getAnswer;
     mapping(uint256 => uint256) public getTimestamp;
@@ -34,6 +35,7 @@ contract MockV3Aggregator is AggregatorV3Interface {
         getAnswer[latestRound] = _answer;
         getTimestamp[latestRound] = block.timestamp;
         getStartedAt[latestRound] = block.timestamp;
+        isStale = false;
     }
 
     function updateRoundData(uint80 _roundId, int256 _answer, uint256 _timestamp, uint256 _startedAt) public {
@@ -43,6 +45,7 @@ contract MockV3Aggregator is AggregatorV3Interface {
         getAnswer[latestRound] = _answer;
         getTimestamp[latestRound] = _timestamp;
         getStartedAt[latestRound] = _startedAt;
+        isStale = false;
     }
 
     function getRoundData(uint80 _roundId)
@@ -50,7 +53,7 @@ contract MockV3Aggregator is AggregatorV3Interface {
         view
         returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)
     {
-        return (_roundId, getAnswer[_roundId], getStartedAt[_roundId], getTimestamp[_roundId], _roundId);
+        return (_roundId, getAnswer[_roundId], getStartedAt[_roundId], getTimestamp[_roundId], isStale ? 0 : _roundId);
     }
 
     function latestRoundData()
@@ -63,8 +66,12 @@ contract MockV3Aggregator is AggregatorV3Interface {
             getAnswer[latestRound],
             getStartedAt[latestRound],
             getTimestamp[latestRound],
-            uint80(latestRound)
+            isStale ? 0 : uint80(latestRound)
         );
+    }
+
+    function setStale() external {
+        isStale = true;
     }
 
     function description() external pure returns (string memory) {

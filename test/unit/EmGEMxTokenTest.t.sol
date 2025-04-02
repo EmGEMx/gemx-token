@@ -212,6 +212,27 @@ contract EmGEMxTokenTest is Test {
         assertEq(roundTwoDecimals(maxSupplyWei), 394_972_96 ether / 100); // 394972.96
     }
 
+    function testStaleOracleReverts() public {
+        vm.chainId(token.PARENT_CHAIN_ID());
+
+        _setEsu(10000000000000000000); // 1000
+        (uint80 roundId, int256 answer, /*uint256 startedAt*/, uint256 updatedAt, uint80 answeredInRound) =
+            oracle.getRoundData(1);
+
+        oracle.updateRoundData(roundId, 0, updatedAt, answeredInRound);
+        vm.expectRevert(bytes("PoR: answer is zero"));
+        uint256 maxSupplyWei = token.getMaxSupply();
+
+        oracle.updateRoundData(roundId, answer, 0, answeredInRound);
+        vm.expectRevert(bytes("PoR: updatedAt is zero"));
+        maxSupplyWei = token.getMaxSupply();
+
+        oracle.updateRoundData(roundId, answer, updatedAt, answeredInRound);
+        oracle.setStale();
+        vm.expectRevert(bytes("PoR: data is stale"));
+        maxSupplyWei = token.getMaxSupply();
+    }
+
     function roundTwoDecimals(uint256 value) private pure returns (uint256) {
         // Define the rounding factor for 0.01 ether (10^16 wei)
         uint256 roundingFactor = 10 ** 16;
@@ -367,8 +388,8 @@ contract EmGEMxTokenTest is Test {
         // verify that also burnFrom is not possible
         address otherUser = makeAddr("otherUser");
         vm.prank(minter);
-		token.mint(otherUser, 10 ether);
-		// Set up for burnFrom - otherUser approves user
+        token.mint(otherUser, 10 ether);
+        // Set up for burnFrom - otherUser approves user
         vm.prank(otherUser);
         token.approve(user, 5 ether);
 

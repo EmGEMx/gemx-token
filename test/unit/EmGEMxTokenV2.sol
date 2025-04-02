@@ -7,9 +7,8 @@ import {AggregatorV3Interface} from "@chainlink/contracts/v0.8/shared/interfaces
 /**
  * @dev Just for testing contract upgrade functionality.
  */
- /// @custom:oz-upgrades-from src/EmGEMxToken.sol:EmGEMxToken
+/// @custom:oz-upgrades-from src/EmGEMxToken.sol:EmGEMxToken
 contract EmGEMxTokenV2 is EmGEMxToken {
-
     uint256 private addedVariable;
 
     function initializeV2(address oracleAddress, string memory name, string memory symbol) public initializer {
