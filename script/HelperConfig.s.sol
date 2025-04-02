@@ -34,11 +34,13 @@ contract HelperConfig is Script {
 
     function getSepoliaEthConfig() public pure returns (NetworkConfig memory sepoliaNetworkConfig) {
         // no oracle on other chains than Avalanche
-        sepoliaNetworkConfig = NetworkConfig({esuOracle: 0x8D26D407ebed4D03dE7c18f5Db913155a4D587AE, deployOracleMock: false});
+        sepoliaNetworkConfig =
+            NetworkConfig({esuOracle: 0x8D26D407ebed4D03dE7c18f5Db913155a4D587AE, deployOracleMock: false});
     }
 
     function getFujiEthConfig() public pure returns (NetworkConfig memory fujiNetworkConfig) {
-        fujiNetworkConfig = NetworkConfig({esuOracle: 0x8F1C8888fBcd9Cc5D732df1e146d399a21899c22, deployOracleMock: false});
+        fujiNetworkConfig =
+            NetworkConfig({esuOracle: 0x8F1C8888fBcd9Cc5D732df1e146d399a21899c22, deployOracleMock: false});
     }
 
     function getAvalancheEthConfig() public pure returns (NetworkConfig memory avalancheNetworkConfig) {

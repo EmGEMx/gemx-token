@@ -9,9 +9,7 @@ import {EmGEMxTokenV2} from "./EmGEMxTokenV2.sol";
 import {MockV3Aggregator} from "../mocks/MockV3Aggregator.sol";
 
 contract UpgradesTest is Test {
-
     function testUpgrade() public {
-
         MockV3Aggregator newOracle = new MockV3Aggregator(1000);
 
         // Deploy a transparent proxy with ContractA as the implementation and initialize it with 10

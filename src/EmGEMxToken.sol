@@ -103,7 +103,7 @@ contract EmGEMxToken is
 
     function initialize(address oracleAddress, string memory name, string memory symbol) public initializer {
         validateNotZeroAddress(oracleAddress);
-        
+
         __ERC20_init(name, symbol);
         __ERC20Burnable_init();
         __ERC20Pausable_init();
@@ -278,13 +278,11 @@ contract EmGEMxToken is
     /// @return The quried ESU value from the chainlink PoR oracle.
     function _getEsuFromOracle() private view returns (uint256) {
         (
-            uint80 roundID
-            ,
+            uint80 roundID,
             int256 answer,
             /*uint startedAt*/
             ,
-            uint updatedAt
-            ,
+            uint256 updatedAt,
             uint80 answeredInRound
         ) = oracle.latestRoundData();
 

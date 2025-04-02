@@ -271,48 +271,54 @@ contract EmGEMxTokenTest is Test {
     function testRegularUsersCannotBurnOnChildChain() public {
         // Set to a child chain (not the parent chain)
         vm.chainId(1); // Use a different chain ID than PARENT_CHAIN_ID (43114)
-        
+
         address regularUser = makeAddr("regularUser");
         address otherUser = makeAddr("otherUser");
-        
+
         // Verify users don't have minter role
         assertFalse(token.hasRole(token.MINTER_ROLE(), regularUser));
         assertFalse(token.hasRole(token.MINTER_ROLE(), otherUser));
-        
+
         // Mint tokens to users on child chain (using account with minter role)
         vm.prank(minter);
         token.mint(regularUser, 100 ether);
         vm.prank(minter);
         token.mint(otherUser, 100 ether);
-        
+
         // Regular user burns their own tokens despite not having minter role
         vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, regularUser, token.MINTER_ROLE())
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, regularUser, token.MINTER_ROLE()
+            )
         );
         vm.prank(regularUser);
         token.burn(30 ether);
-        
+
         // Verify burn did not work
         assertEq(token.balanceOf(regularUser), 100 ether);
-        
+
         // Set up for burnFrom - otherUser approves regularUser
         vm.prank(otherUser);
         token.approve(regularUser, 50 ether);
-        
+
         // Regular user burns tokens from other user using burnFrom
         vm.expectRevert(
-           abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, regularUser, token.MINTER_ROLE())
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, regularUser, token.MINTER_ROLE()
+            )
         );
         vm.prank(regularUser);
         token.burnFrom(otherUser, 40 ether);
-        
+
         // Verify burnFrom did not work as minter role missing
         assertEq(token.balanceOf(otherUser), 100 ether);
         assertEq(token.allowance(otherUser, regularUser), 50 ether);
-        
+
         // Explicitly assert that users without minter role cannot burn tokens on child chain
         assertTrue(token.balanceOf(regularUser) == 100 ether, "Regular user failed to burn tokens without minter role");
-        assertTrue(token.balanceOf(otherUser) == 100 ether, "Regular user unsuccessfully used burnFrom without minter role");
+        assertTrue(
+            token.balanceOf(otherUser) == 100 ether, "Regular user unsuccessfully used burnFrom without minter role"
+        );
     }
 
     /*##################################################################################*/
