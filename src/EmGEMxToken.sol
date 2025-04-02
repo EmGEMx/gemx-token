@@ -231,6 +231,7 @@ contract EmGEMxToken is
             return type(uint256).max;
         }
 
+        // as returned oracle value has 8 decimals (same as token decimals) we can directly take it for token supply calculation
         return _getEsuFromOracle() * esuPerTokenPrecision / esuPerTokenValue;
     }
 
@@ -290,6 +291,7 @@ contract EmGEMxToken is
         require(updatedAt > 0, "PoR: updatedAt is zero");
         require(answeredInRound >= roundID, "PoR: data is stale");
 
+        // according to docs answer has always 8 decimals!
         return uint256(answer);
     }
 
