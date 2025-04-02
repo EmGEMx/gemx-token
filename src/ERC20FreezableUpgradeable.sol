@@ -20,17 +20,23 @@ import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/
  * Taken from https://docs.openzeppelin.com/community-contracts/0.0.1/api/token#ERC20Custodian
  */
 abstract contract ERC20FreezableUpgradeable is ERC20Upgradeable {
-    /**
-     * @dev The amount of tokens frozen by user address.
-     */
-    mapping(address user => uint256 amount) private _frozen;
+    /// @custom:storage-location erc7201:ERC20FreezableUpgradeable.storage
+    struct ERC20FreezableUpgradeableStorage {
+        /**
+         * @dev The amount of tokens frozen by user address.
+         */
+        mapping(address user => uint256 amount) _frozen;
+    }
 
-    /**
-     * @dev This empty reserved space is put in place to allow future versions to add new
-     * variables without shifting down storage in the inheritance chain.
-     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
-     */
-    uint256[49] private __gap;
+    // keccak256(abi.encode(uint256(keccak256("ERC20FreezableUpgradeable.storage")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant ERC20FreezableUpgradeableStorageLocation =
+        0x3fa3c15e60cd35140c36fb837aa364f49ac6961def966d04c318a640c7984100;
+
+    function _getERC20FreezableStorage() private pure returns (ERC20FreezableUpgradeableStorage storage $) {
+        assembly {
+            $.slot := ERC20FreezableUpgradeableStorageLocation
+        }
+    }
 
     /**
      * @dev Emitted when tokens are frozen for a user.
@@ -73,7 +79,8 @@ abstract contract ERC20FreezableUpgradeable is ERC20Upgradeable {
      * @dev Returns the amount of tokens frozen for a user.
      */
     function frozen(address user) public view virtual returns (uint256) {
-        return _frozen[user];
+        ERC20FreezableUpgradeableStorage storage $ = _getERC20FreezableStorage();
+        return $._frozen[user];
     }
 
     /**
@@ -87,7 +94,8 @@ abstract contract ERC20FreezableUpgradeable is ERC20Upgradeable {
      */
     function freeze(address user, uint256 amount) external virtual onlyFreezer {
         if (availableBalance(user) < amount) revert ERC20InsufficientUnfrozenBalance(user);
-        _frozen[user] = amount;
+        ERC20FreezableUpgradeableStorage storage $ = _getERC20FreezableStorage();
+        $._frozen[user] = amount;
         emit TokensFrozen(user, amount);
     }
 
