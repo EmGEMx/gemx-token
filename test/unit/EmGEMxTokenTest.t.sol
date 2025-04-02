@@ -257,6 +257,7 @@ contract EmGEMxTokenTest is Test {
 
         assertEq(token.balanceOf(user), 10 ether);
 
+        // add minter role to user -> now burning his tokens should be possible
         bytes32 role = token.MINTER_ROLE();
         vm.prank(admin);
         token.grantRole(role, user);
@@ -268,7 +269,7 @@ contract EmGEMxTokenTest is Test {
         assertEq(token.balanceOf(user), 9 ether);
     }
 
-    function testRegularUsersCannotBurnOnChildChain() public {
+    function testRegularUsersWihtoutMinterRoleCannotBurnOnChildChain() public {
         // Set to a child chain (not the parent chain)
         vm.chainId(1); // Use a different chain ID than PARENT_CHAIN_ID (43114)
 
@@ -361,8 +362,20 @@ contract EmGEMxTokenTest is Test {
         vm.expectRevert(EmGEMxToken.EmGEMxToken__BurnOnParentChainNotAllowed.selector);
         vm.prank(user);
         token.burn(1 ether);
-
         assertEq(token.balanceOf(user), 10 ether, "balance should not change");
+
+        // verify that also burnFrom is not possible
+        address otherUser = makeAddr("otherUser");
+        vm.prank(minter);
+		token.mint(otherUser, 10 ether);
+		// Set up for burnFrom - otherUser approves user
+        vm.prank(otherUser);
+        token.approve(user, 5 ether);
+
+        vm.expectRevert(EmGEMxToken.EmGEMxToken__BurnOnParentChainNotAllowed.selector);
+        vm.prank(user);
+        token.burnFrom(otherUser, 4 ether);
+        assertEq(token.balanceOf(otherUser), 10 ether, "balance should not change");
     }
 
     function testRedeem_WhenRedeemAddressNotSet_Reverts() public {
