@@ -26,6 +26,13 @@ abstract contract ERC20FreezableUpgradeable is ERC20Upgradeable {
     mapping(address user => uint256 amount) private _frozen;
 
     /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[49] private __gap;
+
+    /**
      * @dev Emitted when tokens are frozen for a user.
      * @param user The address of the user whose tokens were frozen.
      * @param amount The amount of tokens that were frozen.
