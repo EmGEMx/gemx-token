@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.20;
+pragma solidity 0.8.22;
 
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -70,9 +70,8 @@ contract EmGEMxToken is
     - max_tokens = esu / esu_per_token
     */
 
-    // initial esuPerToken: 0.01
-    uint256 private esuPerTokenValue = 1;
-    uint256 private esuPerTokenPrecision = 100;
+    uint256 private esuPerTokenValue;
+    uint256 private esuPerTokenPrecision;
 
     ///////////////////
     // Events
@@ -93,16 +92,24 @@ contract EmGEMxToken is
         _;
     }
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     ///////////////////
     // Functions
     ///////////////////
 
-    function initialize(address oracleAddres, string memory name, string memory symbol) public initializer {
+    function initialize(address oracleAddress, string memory name, string memory symbol) public initializer {
+        validateNotZeroAddress(oracleAddress);
+
         __ERC20_init(name, symbol);
         __ERC20Burnable_init();
         __ERC20Pausable_init();
         __AccessControl_init();
         __Ownable_init(_msgSender());
+        __ERC20Permit_init(name);
         _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setRoleAdmin(MINTER_ROLE, DEFAULT_ADMIN_ROLE);
         _setRoleAdmin(ESU_PER_TOKEN_MODIFIER_ROLE, DEFAULT_ADMIN_ROLE);
@@ -111,7 +118,11 @@ contract EmGEMxToken is
         _setRoleAdmin(LIMITER_ROLE, DEFAULT_ADMIN_ROLE);
         _setRoleAdmin(REDEEMER_ROLE, DEFAULT_ADMIN_ROLE);
 
-        oracle = AggregatorV3Interface(oracleAddres);
+        oracle = AggregatorV3Interface(oracleAddress);
+
+        // initial esuPerToken: 0.01
+        esuPerTokenValue = 1;
+        esuPerTokenPrecision = 100;
     }
 
     ///////////////////
@@ -124,8 +135,13 @@ contract EmGEMxToken is
     }
 
     /// @notice Wrapps ERC20BurnableUpgradeable._burn
-    function burn(address account, uint256 value) external onlyRole(MINTER_ROLE) {
-        _burn(account, value);
+    function burn(uint256 value) public override onlyRole(MINTER_ROLE) {
+        super.burn(value);
+    }
+
+    /// @notice Wrapps ERC20BurnableUpgradeable._burnFrom
+    function burnFrom(address account, uint256 value) public override onlyRole(MINTER_ROLE) {
+        super.burnFrom(account, value);
     }
 
     /// @notice Burns token from the redeemAddress.
@@ -215,6 +231,7 @@ contract EmGEMxToken is
             return type(uint256).max;
         }
 
+        // as returned oracle value has 8 decimals (same as token decimals) we can directly take it for token supply calculation
         return _getEsuFromOracle() * esuPerTokenPrecision / esuPerTokenValue;
     }
 
@@ -262,16 +279,19 @@ contract EmGEMxToken is
     /// @return The quried ESU value from the chainlink PoR oracle.
     function _getEsuFromOracle() private view returns (uint256) {
         (
-            /* uint80 roundID */
-            ,
+            uint80 roundID,
             int256 answer,
             /*uint startedAt*/
             ,
-            /*uint timeStamp*/
-            ,
-            /*uint80 answeredInRound*/
+            uint256 updatedAt,
+            uint80 answeredInRound
         ) = oracle.latestRoundData();
 
+        require(answer > 0, "PoR: answer is zero");
+        require(updatedAt > 0, "PoR: updatedAt is zero");
+        require(answeredInRound >= roundID, "PoR: data is stale");
+
+        // according to docs answer has always 8 decimals!
         return uint256(answer);
     }
 

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.20;
+pragma solidity 0.8.22;
 
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
@@ -17,10 +17,23 @@ import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/
  * {_unblockUser} is called.
  */
 abstract contract ERC20BlocklistUpgradeable is ERC20Upgradeable {
-    /**
-     * @dev Blocked status of addresses. True if blocked, False otherwise.
-     */
-    mapping(address user => bool) private _blocked;
+    /// @custom:storage-location erc7201:ERC20BlocklistUpgradeable.storage
+    struct ERC20BlocklistUpgradeableStorage {
+        /**
+         * @dev Blocked status of addresses. True if blocked, False otherwise.
+         */
+        mapping(address user => bool) _blocked;
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("ERC20BlocklistUpgradeable.storage")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant ERC20BlocklistUpgradeableStorageLocation =
+        0x943d6f0aae33a11bdac5b1e1fa272eeefbfbb201792466fc6e6bfcdac78e2f00;
+
+    function _getERC20BlocklistStorage() private pure returns (ERC20BlocklistUpgradeableStorage storage $) {
+        assembly {
+            $.slot := ERC20BlocklistUpgradeableStorageLocation
+        }
+    }
 
     /**
      * @dev Emitted when a user is blocked.
@@ -40,8 +53,9 @@ abstract contract ERC20BlocklistUpgradeable is ERC20Upgradeable {
     /**
      * @dev Returns the blocked status of an account.
      */
-    function blocked(address account) public virtual returns (bool) {
-        return _blocked[account];
+    function blocked(address account) public view virtual returns (bool) {
+        ERC20BlocklistUpgradeableStorage storage $ = _getERC20BlocklistStorage();
+        return $._blocked[account];
     }
 
     /**
@@ -50,7 +64,8 @@ abstract contract ERC20BlocklistUpgradeable is ERC20Upgradeable {
     function _blockUser(address user) internal virtual returns (bool) {
         bool isBlocked = blocked(user);
         if (!isBlocked) {
-            _blocked[user] = true;
+            ERC20BlocklistUpgradeableStorage storage $ = _getERC20BlocklistStorage();
+            $._blocked[user] = true;
             emit UserBlocked(user);
         }
         return isBlocked;
@@ -62,7 +77,8 @@ abstract contract ERC20BlocklistUpgradeable is ERC20Upgradeable {
     function _unblockUser(address user) internal virtual returns (bool) {
         bool isBlocked = blocked(user);
         if (isBlocked) {
-            _blocked[user] = false;
+            ERC20BlocklistUpgradeableStorage storage $ = _getERC20BlocklistStorage();
+            $._blocked[user] = false;
             emit UserUnblocked(user);
         }
         return isBlocked;

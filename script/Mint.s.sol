@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.20;
+pragma solidity 0.8.22;
 
 //import {Script, console} from "forge-std/Script.sol"; // not recognized by VS Code
 import {Script, console} from "lib/forge-std/src/Script.sol";
