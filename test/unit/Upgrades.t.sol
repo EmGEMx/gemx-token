@@ -59,5 +59,13 @@ contract UpgradesTest is Test {
         console.log("Value after upgrade --> ", instance.name());
         console.log("----------------------------------");
         assertEq(instance.name(), "emGEMxV2");
+
+        // set newly added variable and verify value.
+        EmGEMxTokenV2 instanceV2 = EmGEMxTokenV2(address(instance));
+        instanceV2.setAddedVariableValue(123);
+        console.log("----------------------------------");
+        console.log("Value of added variable after calling new functionality --> ", instanceV2.getAddedVariableValue());
+        console.log("----------------------------------");
+        assertEq(instanceV2.getAddedVariableValue(), 123);
     }
 }
