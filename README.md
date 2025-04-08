@@ -88,28 +88,35 @@ The following will be done once a month and influences the amount of tokens that
 
 2. ESU adjustment: ESU will be reduced bei 0.1%, allowing us to mint more tokens.
 
-### Redeeming tokens
-
-Users can redeem their tokens for the physical gemstones counterparts, which basically means that the gemstones are taken out of the safe/vault and delivered to the users in exchange for the tokens which eventually get burned. For this the user needs to transfer the tokens to a particular `redeemAddress` specified by emGEMx company and definable inside the token contract. On the parent chain tokens can only be burnt from that special address.
-
 ### Burning tokens
 
-In general token burns should be strictly restricted, neither users should be able nor emGEMx on behalf of users should be able to burn tokens from the users (e.g. for a potential clawback scenario in case users lose access to the funds).
+In general token burns should be strictly restricted, neither users nor emGEMx on behalf of users should be able to burn tokens from the users (e.g. for a potential clawback scenario in case users lose access to the funds).
 
-However certain functionality requires token burning capabilities. Hence tokens should be burnable solely in the following cases: 
+However, certain functionality requires token burning capabilities. Hence tokens should be burnable solely in the following cases: 
 - **on child chains:** only by the CCIP bridge to bring tokens from the child chain (burn) to the parent chain (release). Any tokens previously transfered from parent chain (lock) to child chain (mint) do not require burning for the transfer to settle.
-- **on the parent chain:** only as part of the redemption process -> and only by the redeemer from the `redeemAddress`.
+- **on the parent chain:** only as part of the redemption process -> and only by the redeemer from the `redeemAddress`. While technically it cannot but completely excluded that no other party but the one having the special redeemer role can burn tokens (e.g. the token admin could assign the minter role to any address anytime, hence open the door for burning tokens), those burn events could be monitored and certain notifiction actions executed in case of a burn event not triggered by the redeemer. An additional check that is only executed on the token deployed on the parent chain will ensure that token burns are only possible on that particular `redeemAddress`. Therefore even if other wallets get the minter role assigned at any point of time burnings are still strictly prohibited and only allowed on that address (see next section [Redeeming tokens](#redeeming-tokens)).
+
+#### Redeeming tokens
+
+Users can redeem their tokens for the physical gemstones counterparts, which basically means that the gemstones are taken out of the safe/vault and delivered to the users in exchange for the tokens which eventually get burned. For this the user needs to transfer the tokens to a particular `redeemAddress` specified by emGEMx company and definable inside the token contract. On the parent chain tokens can only be burnt from that special address, no other addresses will get the mint role assigned (and thus will be able to burn).
 
 ### Cross Chain Support
 
 Cross-chain support will be enabled by leveraging Chainlink's CCIP via Token Manager which allows full cross-chain capabilities without changes in the token design/implementation. The only requirement from chainlink is to have a dedicated token owner (implemented via openzeppelin's `Ownable` contract);
 
-Cross-chain token transfers strategies used:
+The below Cross-chain token transfers strategies are used:
 
 - Source/Parent chain (Avalanche C-Chain): `lock & release`
 
 - All other destination/child chains (e.g. Ethereum Mainnet): `mint & burn`
 
+As a result tokens sent from the parent chain to any child chain will be 
+- locked inside the token pool contract on the parent chain and
+- minted by CCIP on the child chain
+
+Similarly tokens sent from any child chain back to the parent chain
+- will be burned by CCIP on the child chain and
+- released/sent from parent chain's token pool
 
 ## Build, Test, Deploy
 

@@ -88,7 +88,7 @@ contract EmGEMxTokenTest is Test {
         assertEq(token.getOracleAddress(), address(newOracle));
     }
 
-    function testSetOracleAddress_CannotBeCalledOnNonParentChain() public {
+    function testSetOracleAddress_CannotBeCalledOnChildChain() public {
         vm.chainId(1); // non parent chain
 
         vm.prank(admin);
@@ -172,7 +172,7 @@ contract EmGEMxTokenTest is Test {
         assertEq(esuPrecision, 10000);
     }
 
-    function testEsuPerToken_CannotBeUpdatedOnNonParentChain() public {
+    function testEsuPerToken_CannotBeUpdatedOnChildChain() public {
         (uint256 esu, uint256 esuPrecision) = token.getEsuPerToken();
         assertEq(esu, 1);
         assertEq(esuPrecision, 100);
@@ -292,7 +292,7 @@ contract EmGEMxTokenTest is Test {
         assertEq(token.balanceOf(user), 9 * ONE_TOKEN);
     }
 
-    function testRegularUsersWihtoutMinterRoleCannotBurnOnChildChain() public {
+    function testRegularUsersWithoutMinterRoleCannotBurnOnChildChain() public {
         // Set to a child chain (not the parent chain)
         vm.chainId(1); // Use a different chain ID than PARENT_CHAIN_ID (43114)
 
@@ -372,7 +372,7 @@ contract EmGEMxTokenTest is Test {
         assertEq(token.getRedeemAddress(), newRedeemAddress);
     }
 
-    function testBurnOnParentChainOnlyAllowedForRedeemAddress() public {
+    function testBurnOnParentChainOnlyAllowedOnRedeemAddress() public {
         _setEsu(100000 * ONE_TOKEN / 100); // 1000
         vm.chainId(token.PARENT_CHAIN_ID()); // burn restriction only in place on parent chain
 
@@ -448,7 +448,7 @@ contract EmGEMxTokenTest is Test {
         assertEq(token.getRedeemAddress(), newRedeemAddress, "Addres should not change");
     }
 
-    function testRedeem_CannotBeCalledOnNonParentChain() public {
+    function testRedeem_CannotBeCalledOnChildChain() public {
         vm.chainId(1); // non parent chain
 
         vm.prank(redeemer);
@@ -456,7 +456,7 @@ contract EmGEMxTokenTest is Test {
         token.redeem(1);
     }
 
-    function testSetRedeemAddress_CannotBeCalledOnNonParentChain() public {
+    function testSetRedeemAddress_CannotBeCalledOnChildChain() public {
         vm.chainId(1); // non parent chain
 
         vm.prank(admin);
