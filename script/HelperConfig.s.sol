@@ -44,12 +44,14 @@ contract HelperConfig is Script {
     }
 
     function getAvalancheEthConfig() public pure returns (NetworkConfig memory avalancheNetworkConfig) {
-        avalancheNetworkConfig = NetworkConfig({esuOracle: 0x0d2807dc7FA52d3B38be564B64a2b37753C49AdD, deployOracleMock: false});
+        avalancheNetworkConfig =
+            NetworkConfig({esuOracle: 0x0d2807dc7FA52d3B38be564B64a2b37753C49AdD, deployOracleMock: false});
     }
 
     function getMainnetEthConfig() public pure returns (NetworkConfig memory mainnetNetworkConfig) {
         // no oracle on other chains than Avalanche (oracle will be ignored)
-        mainnetNetworkConfig = NetworkConfig({esuOracle: 0x0000000000000000000000000000000000000001, deployOracleMock: false});
+        mainnetNetworkConfig =
+            NetworkConfig({esuOracle: 0x0000000000000000000000000000000000000001, deployOracleMock: false});
     }
 
     function getOrCreateAnvilEthConfig() public view returns (NetworkConfig memory anvilNetworkConfig) {
