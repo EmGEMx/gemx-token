@@ -33,24 +33,23 @@ contract HelperConfig is Script {
     }
 
     function getSepoliaEthConfig() public pure returns (NetworkConfig memory sepoliaNetworkConfig) {
-        // no oracle on other chains than Avalanche
+        // no oracle on other chains than Avalanche (oracle will be ignored)
         sepoliaNetworkConfig =
-            NetworkConfig({esuOracle: 0x8D26D407ebed4D03dE7c18f5Db913155a4D587AE, deployOracleMock: false});
+            NetworkConfig({esuOracle: 0x0000000000000000000000000000000000000001, deployOracleMock: false});
     }
 
     function getFujiEthConfig() public pure returns (NetworkConfig memory fujiNetworkConfig) {
         fujiNetworkConfig =
-            NetworkConfig({esuOracle: 0x8F1C8888fBcd9Cc5D732df1e146d399a21899c22, deployOracleMock: false});
+            NetworkConfig({esuOracle: 0x07B902D00a06eFf8878AC4072c566277b0389ACB, deployOracleMock: false});
     }
 
     function getAvalancheEthConfig() public pure returns (NetworkConfig memory avalancheNetworkConfig) {
-        revert("Oracle feed address missing");
-        avalancheNetworkConfig = NetworkConfig({esuOracle: address(0x0), deployOracleMock: false});
+        avalancheNetworkConfig = NetworkConfig({esuOracle: 0x0d2807dc7FA52d3B38be564B64a2b37753C49AdD, deployOracleMock: false});
     }
 
     function getMainnetEthConfig() public pure returns (NetworkConfig memory mainnetNetworkConfig) {
-        // no oracle on other chains than Avalanche
-        mainnetNetworkConfig = NetworkConfig({esuOracle: address(0x0), deployOracleMock: false});
+        // no oracle on other chains than Avalanche (oracle will be ignored)
+        mainnetNetworkConfig = NetworkConfig({esuOracle: 0x0000000000000000000000000000000000000001, deployOracleMock: false});
     }
 
     function getOrCreateAnvilEthConfig() public view returns (NetworkConfig memory anvilNetworkConfig) {

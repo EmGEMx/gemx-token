@@ -9,7 +9,7 @@
 | Issuer                    | GemX AG, Zug, CH                                  |
 | Number of Tokens          | Variable                                          |
 | Number of Decimals        | 8                                                 |
-| Type                      | Crypto Asset (Asset Token)                        |
+| Token Address             | 0xA445bA2c94d9dE6bFd13F2fe4165E738C4330710        |
 | Use Case                  | Tokenized Emeralds                                |
 | Underlying Asset          | Emeralds                                          |
 | Transferable              | Yes                                               |
