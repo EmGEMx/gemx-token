@@ -2,35 +2,35 @@
 
 ## Token Properties
 
-| Property                  | Value                                             |
-| ------------------------- | ------------------------------------------------- |
-| Name                      | EmGEMx Switzerland                                |
-| Symbol                    | EmCH                                              |
-| Issuer                    | GemX AG, Zug, CH                                  |
-| Number of Tokens          | Variable                                          |
-| Number of Decimals        | 8                                                 |
-| Token Address             | 0xA445bA2c94d9dE6bFd13F2fe4165E738C4330710        |
-| Use Case                  | Tokenized Emeralds                                |
-| Underlying Asset          | Emeralds                                          |
-| Transferable              | Yes                                               |
-| Transaction Fee           | No                                                |
-| Burn Fee                  | No                                                |
-| Initial Price             | Depends on ESU                                    |
-| Distribution              | Proof-of-Reserve + Buy/DEX/CEX                    |
-| Technical Base            | ERC-20 on Avalanche                               |
-| Public Tradeable          | Yes                                               |
-| Governance Function       | No                                                |
-| Allowlist                 | No                                                |
-| Blocklist                 | Yes                                               |
-| Mintable                  | Yes                                               |
-| Burnable                  | Yes (redeem)                                      |
-| Pausable                  | Yes (all)                                         |
-| Roles                     | Owner, Minter, ESU mod, Pause, Custodian, Limiter |
-| Force Transfer (Clawback) | No                                                |
-| Max Tokens per Address    | No limit                                          |
-| Upgradeable               | Yes                                               |
-| Cross-Chain               | Yes (Ethereum, etc.) – CCIP                       |
-| Other features            | Emerald Standard Unit, Minting based on PoR       |
+| Property                  | Value                                                      |
+| ------------------------- | ---------------------------------------------------------- |
+| Name                      | EmGEMx Switzerland                                         |
+| Symbol                    | EmCH                                                       |
+| Issuer                    | GEMx AG, Zug, CH                                           |
+| Number of Tokens          | Variable                                                   |
+| Number of Decimals        | 8                                                          |
+| Token Address             | 0xA445bA2c94d9dE6bFd13F2fe4165E738C4330710                 |
+| Use Case                  | Tokenized Emeralds                                         |
+| Underlying Asset          | Emeralds                                                   |
+| Transferable              | Yes                                                        |
+| Transaction Fee           | No                                                         |
+| Burn Fee                  | No                                                         |
+| Initial Price             | Depends on ESU                                             |
+| Distribution              | Proof-of-Reserve + Buy/DEX/CEX                             |
+| Technical Base            | ERC-20 on Avalanche                                        |
+| Public Tradeable          | Yes                                                        |
+| Governance Function       | No                                                         |
+| Allowlist                 | No                                                         |
+| Blocklist                 | Yes                                                        |
+| Mintable                  | Yes                                                        |
+| Burnable                  | Yes (restricted to redeemer)                               |
+| Pausable                  | Yes (all)                                                  |
+| Roles                     | Owner, Minter, ESU mod, Pauser, Freezer, Limiter, Redeemer |
+| Force Transfer (Clawback) | No                                                         |
+| Max Tokens per Address    | No limit                                                   |
+| Upgradeable               | Yes                                                        |
+| Cross-Chain               | Yes (Ethereum, etc.) – CCIP                                |
+| Other features            | Emerald Standard Unit, Minting based on PoR                |
 
 Special Features
 - Oracle writes Proof-of-Reserve to Blockchain (how many gemstones in ESU are in vault and can be minted)
